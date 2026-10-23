@@ -218,15 +218,25 @@ export const findSafeRoute = async (origin, destination, vehicle = "mobil") => {
 // Laporan aktif untuk ditampilkan di peta (GeoJSON FeatureCollection).
 // Hanya laporan dengan status di CFG.statuses (default: "diproses").
 export const getActiveHazardsGeoJSON = async (bbox) => {
-  const filter = { status: { $in: CFG.statuses }, "location.coordinates.0": { $exists: true } };
+  const filter = {
+    status: { $in: CFG.statuses },
+    "location.coordinates.0": { $exists: true },
+  };
+
   if (bbox) {
     const [w, s, e, n] = bbox;
     filter.location = {
-      $geoWithin: { $geometry: { type: "Polygon", coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] } },
+      $geoWithin: {
+        $geometry: {
+          type: "Polygon",
+          coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]],
+        },
+      },
     };
   }
+
   const reports = await Report.find(filter)
-    .select("title severity status address location")
+    .select("title severity status address location images")
     .limit(1000)
     .lean();
 
@@ -241,7 +251,9 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
         address: r.address,
         severity: r.severity,
         status: r.status,
-        // kendaraan yang masih bisa melewati titik ini (mis. ["motor","jalan_kaki"] untuk kerusakan ringan)
+        images: (r.images || []).map(
+          (p) => `${process.env.BASE_URL}/${p}`
+        ),
         passableBy: passableBy(r.severity),
       },
     })),
