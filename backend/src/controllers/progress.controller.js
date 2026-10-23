@@ -8,22 +8,58 @@ import { success, created, error } from "../utils/responseFormatter.js";
 import { removeFiles } from "../utils/file.js";
 
 const toImagePaths = (files = []) => files.map((f) => `uploads/progress/${f.filename}`);
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // GET /api/reports/:reportId/progress  (publik) -> timeline dari yang paling lama
 export const listProgress = async (req, res, next) => {
   try {
     const { reportId } = req.params;
-    if (!mongoose.isValidObjectId(reportId)) {
-      return error(res, { message: "ID laporan tidak valid", statusCode: 400 });
-    }
-    const report = await Report.findById(reportId).select("status");
-    if (!report) return error(res, { message: "Laporan tidak ditemukan", statusCode: 404 });
+    const { search, status } = req.query;
 
-    const items = await RepairProgress.find({ report: reportId }).sort({ createdAt: 1 });
+    if (!mongoose.isValidObjectId(reportId)) {
+      return error(res, {
+        message: "ID laporan tidak valid",
+        statusCode: 400,
+      });
+    }
+
+    const report = await Report.findById(reportId).select("status");
+
+    if (!report) {
+      return error(res, {
+        message: "Laporan tidak ditemukan",
+        statusCode: 404,
+      });
+    }
+
+    // Filter progres berdasarkan laporan
+    const filter = { report: reportId };
+
+    // Filter berdasarkan status progres
+    if (status) {
+      filter.status = status;
+    }
+
+    // Search berdasarkan judul dan deskripsi progres
+    if (search?.trim()) {
+      const regex = new RegExp(escapeRegex(search.trim()), "i");
+
+      filter.$or = [
+        { title: regex },
+        { description: regex },
+      ];
+    }
+
+    const items = await RepairProgress.find(filter)
+      .sort({ createdAt: 1 });
+
     return success(res, {
       message: "Progres perbaikan berhasil diambil",
       data: items,
-      meta: { reportStatus: report.status, totalItems: items.length },
+      meta: {
+        reportStatus: report.status,
+        totalItems: items.length,
+      },
     });
   } catch (err) {
     next(err);
