@@ -15,7 +15,7 @@ router.get("/", getReports);
 router.get("/:id", getReportById);
 
 // authenticate sebelum upload agar request tanpa token tidak menyimpan file ke disk
-router.post("/", authenticate, uploadReportImages, createReport);
+router.post("/", uploadReportImages, createReport);
 router.put("/:id", authenticate, uploadReportImages, updateReport);
 router.delete("/:id", authenticate, deleteReport);
 
