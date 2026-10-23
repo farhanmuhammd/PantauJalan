@@ -33,17 +33,39 @@ export const getReports = async (req, res, next) => {
     const { search, status, severity, order } = req.query;
 
     const filter = {};
-    if (status) filter.status = status;
-    if (severity) filter.severity = severity;
-    if (search) {
-      const regex = new RegExp(escapeRegex(search), "i");
-      filter.$or = [{ title: regex }, { address: regex }];
+
+    // Filter berdasarkan status laporan
+    if (status) {
+      filter.status = status;
     }
 
-    const sort = { createdAt: order === "asc" ? 1 : -1 };
+    // Filter berdasarkan tingkat keparahan
+    if (severity) {
+      filter.severity = severity;
+    }
+
+    // Pencarian berdasarkan judul, deskripsi, dan alamat
+    if (search?.trim()) {
+      const regex = new RegExp(escapeRegex(search.trim()), "i");
+
+      filter.$or = [
+        { title: regex },
+        { description: regex },
+        { address: regex },
+      ];
+    }
+
+    // Urutkan berdasarkan waktu pembuatan
+    const sort = {
+      createdAt: order === "asc" ? 1 : -1,
+    };
 
     const [items, totalItems] = await Promise.all([
-      Report.find(filter).sort(sort).skip(skip).limit(limit),
+      Report.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+
       Report.countDocuments(filter),
     ]);
 
