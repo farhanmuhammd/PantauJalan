@@ -1,5 +1,6 @@
 import { success, error } from "../utils/responseFormatter.js";
 import { findSafeRoute, getActiveHazardsGeoJSON } from "../services/safeRoute.js";
+import { normalizeVehicle, VEHICLES } from "../utils/vehicle.js";
 
 // Terima { lat, lng } berupa angka atau string; null jika tidak valid.
 const parsePoint = (p) => {
@@ -12,11 +13,16 @@ const parsePoint = (p) => {
 };
 
 // POST /api/routes/safe
-// Body: { "origin": { "lat": 3.59, "lng": 98.67 }, "destination": { "lat": 3.60, "lng": 98.70 } }
+// Body: {
+//   "origin": { "lat": 3.59, "lng": 98.67 },
+//   "destination": { "lat": 3.60, "lng": 98.70 },
+//   "vehicle": "mobil" | "motor" | "jalan_kaki"     (opsional, default "mobil")
+// }
 export const getSafeRoute = async (req, res, next) => {
   try {
-    const origin = parsePoint(req.body?.origin);
-    const destination = parsePoint(req.body?.destination);
+    const body = req.body ?? {};
+    const origin = parsePoint(body.origin);
+    const destination = parsePoint(body.destination);
     if (!origin || !destination) {
       return error(res, {
         message: "origin dan destination wajib berupa koordinat { lat, lng } yang valid",
@@ -24,7 +30,15 @@ export const getSafeRoute = async (req, res, next) => {
       });
     }
 
-    const result = await findSafeRoute(origin, destination);
+    const vehicle = normalizeVehicle(body.vehicle);
+    if (!vehicle) {
+      return error(res, {
+        message: `vehicle tidak dikenal. Pilihan: ${VEHICLES.join(", ")}`,
+        statusCode: 422,
+      });
+    }
+
+    const result = await findSafeRoute(origin, destination, vehicle);
     return success(res, { message: result.message, data: result });
   } catch (err) {
     if (err.name === "RoutingError") {
@@ -35,6 +49,7 @@ export const getSafeRoute = async (req, res, next) => {
 };
 
 // GET /api/routes/hazards?bbox=minLng,minLat,maxLng,maxLat   (bbox opsional)
+// Hanya menampilkan laporan berstatus "diproses".
 export const getHazards = async (req, res, next) => {
   try {
     let bbox;

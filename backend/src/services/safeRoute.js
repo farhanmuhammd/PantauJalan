@@ -1,6 +1,7 @@
-import Report from "../models/Report.js";
+import Report, { SEVERITY } from "../models/Report.js";
 import { fetchRoutes } from "./osrm.js";
 import { nearestOnLine, offsetPerpendicular, bboxPolygon } from "../utils/geo.js";
+import { blockingSeverities, passableBy } from "../utils/vehicle.js";
 
 const num = (v, fallback) => {
   if (v === undefined || v === "") return fallback;
@@ -9,8 +10,9 @@ const num = (v, fallback) => {
 };
 
 const CFG = {
-  // Status laporan yang dianggap "masih merusak jalan" dan harus dihindari.
-  statuses: (process.env.ROUTING_BLOCK_STATUSES || "menunggu,diverifikasi,diproses")
+  // Status laporan yang dianggap "sedang merusak jalan": dihindari rute DAN ditampilkan di peta (getHazards).
+  // Default hanya "diproses". Bisa diubah lewat .env, contoh: ROUTING_BLOCK_STATUSES=diverifikasi,diproses
+  statuses: (process.env.ROUTING_BLOCK_STATUSES || "diproses")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
@@ -27,9 +29,10 @@ const CFG = {
 };
 
 const WEIGHT = { ringan: 1, sedang: 3, berat: 10 };
+const VEHICLE_LABEL = { mobil: "mobil", motor: "motor", jalan_kaki: "pejalan kaki" };
 
-// Laporan aktif yang berada di dekat garis rute.
-const findHazardsOnRoute = async (coords) => {
+// Semua laporan aktif yang berada di dekat garis rute (apa pun tingkat kerusakannya).
+const findNearbyReports = async (coords) => {
   const candidates = await Report.find({
     status: { $in: CFG.statuses },
     location: { $geoWithin: { $geometry: bboxPolygon(coords, CFG.bufferM * 2) } },
@@ -37,12 +40,12 @@ const findHazardsOnRoute = async (coords) => {
     .select("title severity status address location")
     .lean();
 
-  const hazards = [];
+  const found = [];
   for (const r of candidates) {
     const [lng, lat] = r.location.coordinates;
     const near = nearestOnLine([lng, lat], coords);
     if (near.distance > CFG.bufferM) continue;
-    hazards.push({
+    found.push({
       id: r._id.toString(),
       title: r.title,
       address: r.address,
@@ -55,12 +58,17 @@ const findHazardsOnRoute = async (coords) => {
       position: near.index, // urutan sepanjang rute
     });
   }
-  return hazards.sort((a, b) => a.position - b.position);
+  return found.sort((a, b) => a.position - b.position);
 };
 
-const evaluate = async (route, vias = []) => {
+// `blocking` = tingkat kerusakan yang menghalangi kendaraan ini.
+// hazards  = kerusakan yang menghalangi (dihindari dan dihitung di skor)
+// passable = kerusakan di rute yang masih bisa dilewati kendaraan ini (hanya informasi)
+const evaluate = async (route, blocking, vias = []) => {
   const coords = route.geometry.coordinates;
-  const hazards = await findHazardsOnRoute(coords);
+  const nearby = await findNearbyReports(coords);
+  const hazards = nearby.filter((h) => blocking.includes(h.severity));
+  const passable = nearby.filter((h) => !blocking.includes(h.severity));
   const hazardScore = hazards.reduce((sum, h) => sum + h.weight, 0);
   return {
     distance: route.distance,
@@ -68,6 +76,7 @@ const evaluate = async (route, vias = []) => {
     geometry: route.geometry,
     coords,
     hazards,
+    passable,
     hazardScore,
     cost: route.duration + hazardScore * CFG.penaltySec,
     vias,
@@ -76,30 +85,40 @@ const evaluate = async (route, vias = []) => {
 
 const pickBest = (list) => list.reduce((a, b) => (b.cost < a.cost ? b : a));
 
-const publicRoute = ({ distance, duration, geometry, hazards }) => ({
+const strip = ({ position, weight, ...h }) => h;
+
+const publicRoute = ({ distance, duration, geometry, hazards, passable }) => ({
   distance: Math.round(distance),
   duration: Math.round(duration),
   geometry,
-  hazards: hazards.map(({ position, weight, ...h }) => h),
+  hazards: hazards.map(strip),
+  passableHazards: passable.map(strip),
 });
 
 /**
  * Cari rute dari origin ke destination yang menghindari laporan jalan rusak.
  *
+ * @param {{lat:number,lng:number}} origin
+ * @param {{lat:number,lng:number}} destination
+ * @param {"mobil"|"motor"|"jalan_kaki"} vehicle kendaraan; menentukan profil OSRM dan
+ *   tingkat kerusakan yang dianggap menghalangi (kerusakan ringan masih bisa dilewati motor dan pejalan kaki).
+ *
  * Strategi (OSRM tidak bisa "memblokir" titik arbitrer, jadi kita pakai waypoint):
  *  1. Ambil rute tercepat + alternatifnya dari OSRM.
  *  2. Nilai tiap rute: cari laporan aktif dalam radius `bufferM` dari garis rute.
- *     cost = durasi + (total bobot kerusakan x penalti).
+ *     cost = durasi + (total bobot kerusakan yang menghalangi x penalti).
  *  3. Jika rute terbaik masih melewati kerusakan, paksa rute melambung lewat titik via
  *     yang digeser tegak lurus dari lokasi kerusakan (kiri & kanan), nilai ulang,
  *     ulangi sampai `maxIter` kali atau tidak ada perbaikan lagi.
  */
-export const findSafeRoute = async (origin, destination) => {
+export const findSafeRoute = async (origin, destination, vehicle = "mobil") => {
   const A = [origin.lng, origin.lat];
   const B = [destination.lng, destination.lat];
+  const blocking = blockingSeverities(vehicle, SEVERITY);
+  const label = VEHICLE_LABEL[vehicle];
 
-  const osrmRoutes = await fetchRoutes([A, B], { alternatives: true });
-  const candidates = await Promise.all(osrmRoutes.map((r) => evaluate(r)));
+  const osrmRoutes = await fetchRoutes([A, B], { alternatives: true, vehicle });
+  const candidates = await Promise.all(osrmRoutes.map((r) => evaluate(r, blocking)));
 
   const baseline = candidates[0]; // rute tercepat murni
   const maxDuration = Math.max(baseline.duration * CFG.maxDetourFactor, baseline.duration + 600);
@@ -121,10 +140,15 @@ export const findSafeRoute = async (origin, destination) => {
           .map((v) => ({ v, pos: nearestOnLine(v, best.coords).index }))
           .sort((a, b) => a.pos - b.pos)
           .map((x) => x.v);
-        const [route] = await fetchRoutes([A, ...vias, B]);
-        return evaluate(route, vias);
+        const [route] = await fetchRoutes([A, ...vias, B], { vehicle });
+        return evaluate(route, blocking, vias);
       })
     );
+
+    // Kegagalan satu percobaan tidak menghentikan pencarian, tetapi dicatat agar mudah ditelusuri.
+    attempts.forEach((a) => {
+      if (a.status === "rejected") console.warn("[safeRoute] percobaan pengalihan gagal:", a.reason?.message);
+    });
 
     const valid = attempts
       .filter((a) => a.status === "fulfilled" && a.value.duration <= maxDuration)
@@ -135,15 +159,14 @@ export const findSafeRoute = async (origin, destination) => {
     if (candidate.cost < best.cost) best = candidate;
   }
 
-  const baselineIds = new Set(baseline.hazards.map((h) => h.id));
   const bestIds = new Set(best.hazards.map((h) => h.id));
   const avoided = baseline.hazards.filter((h) => !bestIds.has(h.id));
 
   let status;
   let message;
-  if (best.hazards.length === 0 && baselineIds.size === 0) {
+  if (best.hazards.length === 0 && baseline.hazards.length === 0) {
     status = "aman";
-    message = "Rute tercepat tidak melewati jalan rusak";
+    message = `Rute tercepat tidak melewati jalan rusak yang menghalangi ${label}`;
   } else if (best.hazards.length === 0) {
     status = "dialihkan";
     message = `Rute dialihkan untuk menghindari ${avoided.length} titik jalan rusak`;
@@ -154,17 +177,22 @@ export const findSafeRoute = async (origin, destination) => {
     status = "tidak_terhindarkan";
     message = "Tidak ditemukan jalur alternatif yang wajar; rute masih melewati jalan rusak";
   }
+  if (best.passable.length > 0) {
+    message += `. Ada ${best.passable.length} titik jalan rusak di rute yang masih bisa dilewati ${label}`;
+  }
 
   return {
     status,
     message,
+    vehicle,
     route: publicRoute(best),
     baseline: publicRoute(baseline),
-    avoided: avoided.map(({ position, weight, ...h }) => h),
+    avoided: avoided.map(strip),
   };
 };
 
 // Laporan aktif untuk ditampilkan di peta (GeoJSON FeatureCollection).
+// Hanya laporan dengan status di CFG.statuses (default: "diproses").
 export const getActiveHazardsGeoJSON = async (bbox) => {
   const filter = { status: { $in: CFG.statuses }, "location.coordinates.0": { $exists: true } };
   if (bbox) {
@@ -189,6 +217,8 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
         address: r.address,
         severity: r.severity,
         status: r.status,
+        // kendaraan yang masih bisa melewati titik ini (mis. ["motor","jalan_kaki"] untuk kerusakan ringan)
+        passableBy: passableBy(r.severity),
       },
     })),
   };

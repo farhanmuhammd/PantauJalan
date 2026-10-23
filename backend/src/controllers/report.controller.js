@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import path from "path";
 import Report from "../models/Report.js";
+import RepairProgress from "../models/RepairProgress.js";
 import { MAX_IMAGES } from "../middlewares/upload.js";
 import { success, created, error } from "../utils/responseFormatter.js";
 import { getPagination, buildMeta } from "../utils/paginator.js";
@@ -13,10 +14,12 @@ const canManage = (user, report) =>
 const toImagePaths = (files = []) => files.map((f) => `uploads/reports/${f.filename}`);
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// Mengubah latitude dan longitude dari body (string) menjadi GeoJSON Point
+// Mengubah latitude dan longitude dari body (string) menjadi GeoJSON Point.
+// Mengembalikan: GeoJSON Point jika valid, null jika tidak dikirim/bukan angka, undefined jika di luar rentang.
+const toCoord = (v) => (v === undefined || v === null || String(v).trim() === "" ? NaN : Number(v));
 const buildLocation = (body) => {
-  const lat = parseFloat(body.latitude);
-  const lng = parseFloat(body.longitude);
+  const lat = toCoord(body.latitude);
+  const lng = toCoord(body.longitude);
   if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return undefined; // di luar rentang
   return { type: "Point", coordinates: [lng, lat] };
@@ -73,23 +76,29 @@ export const getReportById = async (req, res, next) => {
 export const createReport = async (req, res, next) => {
   const images = toImagePaths(req.files);
   try {
-    const { title, description, address, severity } = req.body;
+    const body = req.body ?? {};
+    const { title, description, address, severity } = body;
     const payload = {
       title,
       description,
       address,
       severity,
       images,
-      reporter: req.user._id,
-      reporterName: req.user.name,
     };
 
-    const location = buildLocation(req.body);
-    if (location === undefined) {
+    // Lokasi dikirim dari FE (latitude dan longitude) dan wajib ada, karena dipakai untuk peta dan rute.
+    const location = buildLocation(body);
+    if (!location) {
       await removeFiles(images);
-      return error(res, { message: "Koordinat tidak valid", statusCode: 422 });
+      return error(res, {
+        message:
+          location === null
+            ? "Latitude dan longitude wajib diisi (angka)"
+            : "Koordinat tidak valid",
+        statusCode: 422,
+      });
     }
-    if (location) payload.location = location;
+    payload.location = location;
 
     const report = await Report.create(payload);
     return created(res, { message: "Laporan berhasil dibuat", data: report });
@@ -121,8 +130,19 @@ export const updateReport = async (req, res, next) => {
       return error(res, { message: "Anda tidak berhak mengubah laporan ini", statusCode: 403 });
     }
 
+    const body = req.body ?? {};
+
+    // Status "selesai" hanya boleh lewat progres perbaikan (wajib ada foto bukti), lihat progress.controller.js
+    if (body.status === "selesai" && report.status !== "selesai" && STAFF_ROLES.includes(req.user.role)) {
+      await removeFiles(newImages);
+      return error(res, {
+        message: "Status selesai diatur otomatis saat progres perbaikan berstatus selesai (dengan foto bukti)",
+        statusCode: 400,
+      });
+    }
+
     // Tentukan gambar lama yang dihapus
-    let removeList = req.body.removeImages || [];
+    let removeList = body.removeImages || [];
     if (!Array.isArray(removeList)) removeList = [removeList];
     const removeNames = removeList.map((p) => path.basename(p));
     const toRemove = report.images.filter((p) => removeNames.includes(path.basename(p)));
@@ -136,11 +156,11 @@ export const updateReport = async (req, res, next) => {
     const fields = ["title", "description", "address", "severity"];
     if (STAFF_ROLES.includes(req.user.role)) fields.push("status");
     fields.forEach((f) => {
-      if (req.body[f] !== undefined) report[f] = req.body[f];
+      if (body[f] !== undefined) report[f] = body[f];
     });
 
-    if (req.body.latitude !== undefined || req.body.longitude !== undefined) {
-      const location = buildLocation(req.body);
+    if (body.latitude !== undefined || body.longitude !== undefined) {
+      const location = buildLocation(body);
       if (!location) {
         await removeFiles(newImages);
         return error(res, { message: "Koordinat tidak valid", statusCode: 422 });
@@ -173,8 +193,10 @@ export const deleteReport = async (req, res, next) => {
       return error(res, { message: "Anda tidak berhak menghapus laporan ini", statusCode: 403 });
     }
 
+    const progress = await RepairProgress.find({ report: report._id }).select("images");
     await report.deleteOne();
-    await removeFiles(report.images);
+    await RepairProgress.deleteMany({ report: report._id });
+    await removeFiles([...report.images, ...progress.flatMap((p) => p.images)]);
     return success(res, { message: "Laporan berhasil dihapus", data: null });
   } catch (err) {
     next(err);

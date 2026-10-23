@@ -1,12 +1,39 @@
 // Klien OSRM (Open Source Routing Machine) di atas data OpenStreetMap.
 //
-// PENTING: server publik https://router.project-osrm.org hanya untuk demo/pengembangan
-// (profil mobil saja, ada pembatasan pemakaian). Untuk produksi, jalankan OSRM sendiri
-// dengan data OSM Indonesia/Sumatera lalu isi OSRM_URL di .env.
+// PENTING: server publik hanya untuk demo/pengembangan (ada pembatasan pemakaian).
+// - router.project-osrm.org hanya punya profil mobil, nama profil di URL diabaikan.
+// - routing.openstreetmap.de/routed-foot (FOSSGIS) untuk pejalan kaki; instance FOSSGIS memakai
+//   nama profil "driving" di URL untuk semua jenis (profil sebenarnya ditentukan oleh instance-nya).
+// Untuk produksi, jalankan OSRM sendiri (mobil dan foot) dengan data OSM lalu isi variabel .env di bawah.
+//
+//   OSRM_URL / OSRM_PROFILE                 -> mobil (dan motor bila OSRM_MOTOR_URL kosong)
+//   OSRM_MOTOR_URL / OSRM_MOTOR_PROFILE     -> motor (OSRM tidak punya profil motor bawaan, memakai graf mobil)
+//   OSRM_FOOT_URL / OSRM_FOOT_PROFILE       -> pejalan kaki
 
-const BASE_URL = (process.env.OSRM_URL || "https://router.project-osrm.org").replace(/\/$/, "");
-const PROFILE = process.env.OSRM_PROFILE || "driving";
+const DEFAULT_CAR_URL = "https://router.project-osrm.org";
+const DEFAULT_FOOT_URL = "https://routing.openstreetmap.de/routed-foot";
 const TIMEOUT_MS = Number(process.env.OSRM_TIMEOUT_MS) || 10000;
+
+const stripSlash = (u) => u.replace(/\/$/, "");
+
+const endpointFor = (vehicle) => {
+  const carUrl = process.env.OSRM_URL || DEFAULT_CAR_URL;
+  const carProfile = process.env.OSRM_PROFILE || "driving";
+  switch (vehicle) {
+    case "jalan_kaki":
+      return {
+        url: stripSlash(process.env.OSRM_FOOT_URL || DEFAULT_FOOT_URL),
+        profile: process.env.OSRM_FOOT_PROFILE || "driving",
+      };
+    case "motor":
+      return {
+        url: stripSlash(process.env.OSRM_MOTOR_URL || carUrl),
+        profile: process.env.OSRM_MOTOR_PROFILE || carProfile,
+      };
+    default:
+      return { url: stripSlash(carUrl), profile: carProfile };
+  }
+};
 
 export class RoutingError extends Error {
   constructor(message, statusCode = 502) {
@@ -19,10 +46,11 @@ export class RoutingError extends Error {
 /**
  * Ambil rute dari OSRM.
  * @param {Array<[number, number]>} points daftar [lng, lat]: asal, (via...), tujuan
- * @param {{alternatives?: boolean}} opts alternatif hanya didukung untuk 2 titik
+ * @param {{alternatives?: boolean, vehicle?: string}} opts alternatif hanya didukung untuk 2 titik
  * @returns {Promise<Array>} array rute OSRM (geometry GeoJSON, distance m, duration detik)
  */
-export const fetchRoutes = async (points, { alternatives = false } = {}) => {
+export const fetchRoutes = async (points, { alternatives = false, vehicle = "mobil" } = {}) => {
+  const { url: base, profile } = endpointFor(vehicle);
   const coords = points.map(([lng, lat]) => `${lng},${lat}`).join(";");
   const params = new URLSearchParams({
     overview: "full",
@@ -30,7 +58,7 @@ export const fetchRoutes = async (points, { alternatives = false } = {}) => {
     steps: "false",
     alternatives: alternatives && points.length === 2 ? "3" : "false",
   });
-  const url = `${BASE_URL}/route/v1/${PROFILE}/${coords}?${params}`;
+  const url = `${base}/route/v1/${profile}/${coords}?${params}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
