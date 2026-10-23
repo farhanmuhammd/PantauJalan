@@ -6,6 +6,7 @@ import { MAX_IMAGES } from "../middlewares/upload.js";
 import { success, created, error } from "../utils/responseFormatter.js";
 import { getPagination, buildMeta } from "../utils/paginator.js";
 import { removeFiles } from "../utils/file.js";
+import { resolveAddress } from "../services/geoCode.js";
 
 const STAFF_ROLES = ["admin", "petugas"];
 const canManage = (user, report) =>
@@ -77,11 +78,11 @@ export const createReport = async (req, res, next) => {
   const images = toImagePaths(req.files);
   try {
     const body = req.body ?? {};
-    const { title, description, address, severity } = body;
+    const { title, description, severity } = body;
     const payload = {
       title,
       description,
-      address,
+      address: typeof body.address === "string" ? body.address.trim() : "",
       severity,
       images,
     };
@@ -99,6 +100,12 @@ export const createReport = async (req, res, next) => {
       });
     }
     payload.location = location;
+
+    // Alamat opsional: jika FE tidak mengirim address, isi otomatis dari koordinat (reverse geocoding OSM).
+    if (!payload.address) {
+      const [lng, lat] = location.coordinates;
+      payload.address = await resolveAddress(lat, lng);
+    }
 
     const report = await Report.create(payload);
     return created(res, { message: "Laporan berhasil dibuat", data: report });
@@ -166,6 +173,13 @@ export const updateReport = async (req, res, next) => {
         return error(res, { message: "Koordinat tidak valid", statusCode: 422 });
       }
       report.location = location;
+
+      // Lokasi berubah dan address tidak ikut dikirim: perbarui alamat dari koordinat baru.
+      const addressSent = typeof body.address === "string" && body.address.trim() !== "";
+      if (!addressSent) {
+        const [lng, lat] = location.coordinates;
+        report.address = await resolveAddress(lat, lng);
+      }
     }
 
     report.images = [...remaining, ...newImages];
