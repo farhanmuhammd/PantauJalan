@@ -70,3 +70,68 @@ export const bboxPolygon = (line, padMeters = 0) => {
     coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]],
   };
 };
+// Jarak dua titik [lng, lat] dalam meter (lokal, cukup akurat untuk jarak pendek).
+const distM = (a, b) => {
+  const { kx, ky } = metersPerDegree(a[1]);
+  return Math.hypot((a[0] - b[0]) * kx, (a[1] - b[1]) * ky);
+};
+
+const keyOf = (p) => `${p[0].toFixed(6)},${p[1].toFixed(6)}`;
+
+/**
+ * Hapus lorong buntu / putaran yang terbentuk di sekitar titik via.
+ *
+ * Titik via digeser ke samping dari jalan rusak lalu ditempelkan OSRM ke jalan terdekat. Jika itu jalan
+ * buntu, rute masuk sampai ujung, memutar, lalu keluar lewat jalan yang sama (OSRM melarang putar balik
+ * di titik via pada profil mobil, jadi putarannya terjadi di ujung buntu, bukan di titik via):
+ *   ... J -> a -> via -> b -> ujung -> b -> via -> a -> J ...
+ * Rute itu melewati persimpangan J dua kali dengan titik via berada di antaranya. Bagian J..J dibuang
+ * dan hanya satu J yang dipertahankan. Ini juga berlaku untuk lorong berujung putaran (lollipop).
+ * Hanya siklus yang MEMUAT titik via yang dibuang, jadi putaran sah di rute (mis. memutari blok karena
+ * larangan belok) tidak disentuh.
+ *
+ * @param {Array} line koordinat rute [[lng, lat], ...]
+ * @param {Array} viaPoints titik via [lng, lat] (sebaiknya lokasi hasil snap dari OSRM)
+ * @returns {{line: Array, removedMeters: number}} garis baru dan panjang yang dibuang
+ */
+export const removeLoopsAtVias = (line, viaPoints) => {
+  let pts = line;
+  let removedMeters = 0;
+
+  for (const via of viaPoints) {
+    // vertex rute terdekat dengan via
+    let v = -1;
+    let best = Infinity;
+    pts.forEach((p, i) => {
+      const d = distM(p, via);
+      if (d < best) {
+        best = d;
+        v = i;
+      }
+    });
+    if (v <= 0 || v >= pts.length - 1) continue; // via di ujung rute
+
+    // indeks semua kemunculan tiap koordinat
+    const occurrences = new Map();
+    pts.forEach((p, i) => {
+      const k = keyOf(p);
+      if (!occurrences.has(k)) occurrences.set(k, []);
+      occurrences.get(k).push(i);
+    });
+
+    // pasangan (i, j) terluar: koordinat sama, i < j, dan v berada di antaranya
+    let cut = null;
+    for (let i = 0; i < v && !cut; i++) {
+      const same = occurrences.get(keyOf(pts[i]));
+      const j = same[same.length - 1];
+      if (j > i && j >= v) cut = [i, j];
+    }
+    if (!cut) continue;
+
+    const [i, j] = cut;
+    for (let x = i; x < j; x++) removedMeters += distM(pts[x], pts[x + 1]);
+    pts = [...pts.slice(0, i + 1), ...pts.slice(j + 1)];
+  }
+
+  return { line: pts, removedMeters };
+};

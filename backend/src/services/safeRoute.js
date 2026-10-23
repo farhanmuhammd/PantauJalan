@@ -1,6 +1,6 @@
 import Report, { SEVERITY } from "../models/Report.js";
 import { fetchRoutes } from "./osrm.js";
-import { nearestOnLine, offsetPerpendicular, bboxPolygon } from "../utils/geo.js";
+import { nearestOnLine, offsetPerpendicular, bboxPolygon, removeLoopsAtVias } from "../utils/geo.js";
 import { blockingSeverities, passableBy } from "../utils/vehicle.js";
 
 const num = (v, fallback) => {
@@ -61,10 +61,34 @@ const findNearbyReports = async (coords) => {
   return found.sort((a, b) => a.position - b.position);
 };
 
+// Titik via kadang menempel ke jalan buntu sehingga rute masuk lalu keluar lewat jalan yang sama
+// (lorong buntu yang tampak seperti "ekor" di peta). Bagian itu dibuang dari rute; jarak dan
+// durasi dikurangi sebanding dengan panjang yang dibuang.
+const trimSpurs = (route, vias) => {
+  if (vias.length === 0) return route;
+  // pakai lokasi via setelah di-snap OSRM bila tersedia (waypoints: asal, via..., tujuan)
+  const snapped =
+    route.waypoints?.length === vias.length + 2
+      ? route.waypoints.slice(1, -1).map((w) => w.location)
+      : vias;
+
+  const { line, removedMeters } = removeLoopsAtVias(route.geometry.coordinates, snapped);
+  if (removedMeters === 0) return route;
+
+  const ratio = Math.max(0, 1 - removedMeters / route.distance);
+  return {
+    ...route,
+    distance: route.distance - removedMeters,
+    duration: route.duration * ratio,
+    geometry: { type: "LineString", coordinates: line },
+  };
+};
+
 // `blocking` = tingkat kerusakan yang menghalangi kendaraan ini.
 // hazards  = kerusakan yang menghalangi (dihindari dan dihitung di skor)
 // passable = kerusakan di rute yang masih bisa dilewati kendaraan ini (hanya informasi)
-const evaluate = async (route, blocking, vias = []) => {
+const evaluate = async (rawRoute, blocking, vias = []) => {
+  const route = trimSpurs(rawRoute, vias);
   const coords = route.geometry.coordinates;
   const nearby = await findNearbyReports(coords);
   const hazards = nearby.filter((h) => blocking.includes(h.severity));

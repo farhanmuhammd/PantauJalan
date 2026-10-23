@@ -84,5 +84,6 @@ export const fetchRoutes = async (points, { alternatives = false, vehicle = "mob
   if (!res.ok || data?.code !== "Ok" || !data.routes?.length) {
     throw new RoutingError(`Server routing mengembalikan error: ${data?.code || res.status}`, 502);
   }
-  return data.routes;
+  // waypoints = lokasi asal, via, dan tujuan setelah ditempelkan ke jalan (dipakai untuk membuang lorong buntu)
+  return data.routes.map((r) => ({ ...r, waypoints: data.waypoints }));
 };
