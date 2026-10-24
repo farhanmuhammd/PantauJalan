@@ -92,9 +92,14 @@ export default function ReportDetailsForm({
                         onChange={handleTextChange}
                         maxLength={500}
                         rows={4}
-                        placeholder="Jelaskan kondisi kerusakan, ukuran, atau dampaknya bagi pengguna jalan..."
+                        placeholder={`Contoh: Terdapat lubang di badan jalan dengan diameter sekitar 50 cm dan kedalaman 10 cm. Kerusakan berada di dekat persimpangan dan sering tergenang air saat hujan, sehingga pengendara motor harus menghindar dan berisiko terjatuh.`}
                         className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
+
+                    <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+                        Jelaskan jenis kerusakan, perkiraan ukuran atau tingkat keparahan,
+                        lokasi yang lebih spesifik, dan dampaknya bagi pengguna jalan.
+                    </p>
 
                     {errors.description && (
                         <p className="mt-1.5 text-sm text-red-600">
