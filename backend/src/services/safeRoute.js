@@ -37,7 +37,7 @@ const findNearbyReports = async (coords) => {
     status: { $in: CFG.statuses },
     location: { $geoWithin: { $geometry: bboxPolygon(coords, CFG.bufferM * 2) } },
   })
-    .select("title severity status address location")
+    .select("title severity status address location images")
     .lean();
 
   const found = [];
@@ -51,6 +51,7 @@ const findNearbyReports = async (coords) => {
       address: r.address,
       severity: r.severity,
       status: r.status,
+      images: (r.images || []).map((p) => `${process.env.BASE_URL}/${p}`),
       lat,
       lng,
       distanceToRoute: Math.round(near.distance),
