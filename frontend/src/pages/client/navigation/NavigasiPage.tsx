@@ -1,5 +1,5 @@
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
     ArrowRight,
     CarFront,
@@ -23,6 +23,8 @@ import type {
 import { getApiErrorMessage } from "../../../utils/api-error";
 import LocationPickerMap from "./components/LocationPickerMap";
 import { isInsideRegion, REGION } from "./config/region";
+import type { RoadHazardFeature } from "./types/hazards.types";
+import { getRoadHazards } from "./api/hazards.api";
 
 interface NavigationForm {
     origin: LocationSuggestion | null;
@@ -35,6 +37,45 @@ const initialForm: NavigationForm = {
     destination: null,
     vehicle: "mobil",
 };
+
+async function getRoadName({ lat, lng }: Coordinates): Promise<string> {
+    const params = new URLSearchParams({
+        lat: String(lat),
+        lon: String(lng),
+        format: "jsonv2",
+        addressdetails: "1",
+        zoom: "18",
+    });
+
+    const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?${params}`,
+        {
+            headers: {
+                Accept: "application/json",
+            },
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error("Gagal mendapatkan nama jalan.");
+    }
+
+    const data = await response.json();
+    const address = data.address ?? {};
+
+    return (
+        address.road ||
+        address.pedestrian ||
+        address.residential ||
+        address.footway ||
+        address.path ||
+        address.neighbourhood ||
+        address.suburb ||
+        data.name ||
+        data.display_name ||
+        "Lokasi terpilih"
+    );
+}
 
 const vehicles: {
     value: VehicleType;
@@ -57,6 +98,10 @@ export default function NavigasiPage() {
 
     const [locationError, setLocationError] = useState("");
     const [isGettingLocation, setIsGettingLocation] = useState(false);
+    const [roadHazards, setRoadHazards] = useState<RoadHazardFeature[]>([]);
+    const [pickerInitialPosition, setPickerInitialPosition] = useState<Coordinates | null>(null);
+    const [isRerouting, setIsRerouting] = useState(false);
+
 
     const updateForm = <K extends keyof NavigationForm>(
         field: K,
@@ -129,17 +174,40 @@ export default function NavigasiPage() {
         lng: coordinates.lng,
     });
 
-    const handlePickFromMap = (coordinates: Coordinates) => {
+    const handlePickFromMap = async (coordinates: Coordinates) => {
         if (!mapTarget) return;
 
-        const label = `Titik peta (${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)})`;
+        try {
+            const roadName = await getRoadName(coordinates);
 
-        updateForm(
-            mapTarget,
-            createLocationFromCoordinates(coordinates, label),
-        );
+            updateForm(
+                mapTarget,
+                {
+                    id: `custom-${coordinates.lat}-${coordinates.lng}`,
+                    name: roadName,
+                    displayName: roadName,
+                    lat: coordinates.lat,
+                    lng: coordinates.lng,
+                },
+            );
 
-        setMapTarget(null);
+            setMapTarget(null);
+        } catch (error) {
+            console.error("Gagal mendapatkan nama jalan:", error);
+
+            updateForm(
+                mapTarget,
+                {
+                    id: `custom-${coordinates.lat}-${coordinates.lng}`,
+                    name: "Lokasi terpilih",
+                    displayName: "Lokasi terpilih",
+                    lat: coordinates.lat,
+                    lng: coordinates.lng,
+                },
+            );
+
+            setMapTarget(null);
+        }
     };
 
     const handleUseCurrentLocation = () => {
@@ -178,6 +246,93 @@ export default function NavigasiPage() {
             },
         );
     };
+
+    const handleOpenMapPicker = (target: "origin" | "destination") => {
+        const selectedLocation =
+            target === "origin" ? form.origin : form.destination;
+
+        // Prioritaskan lokasi yang sudah dipilih sebelumnya.
+        if (selectedLocation) {
+            setPickerInitialPosition({
+                lat: selectedLocation.lat,
+                lng: selectedLocation.lng,
+            });
+            setMapTarget(target);
+            return;
+        }
+
+        // Jika belum ada lokasi, coba ambil posisi GPS pengguna.
+        if (!navigator.geolocation) {
+            setPickerInitialPosition(null);
+            setMapTarget(target);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+                setPickerInitialPosition({
+                    lat: coords.latitude,
+                    lng: coords.longitude,
+                });
+                setMapTarget(target);
+            },
+            () => {
+                // GPS gagal atau ditolak: tetap buka peta.
+                setPickerInitialPosition(null);
+                setMapTarget(target);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 30000,
+            },
+        );
+    };
+
+    const handleReroute = async (position: Coordinates) => {
+        if (!form.destination || isRerouting) return;
+
+        setIsRerouting(true);
+
+        try {
+            const response = await getSafeRoute({
+                origin: position,
+                destination: {
+                    lat: form.destination.lat,
+                    lng: form.destination.lng,
+                },
+                vehicle: form.vehicle,
+            });
+
+            if (
+                !response.success ||
+                !response.data?.route?.geometry?.coordinates?.length
+            ) {
+                throw new Error(
+                    response.message || "Gagal menghitung ulang rute aman.",
+                );
+            }
+
+            setRouteData(response.data);
+        } catch (error: unknown) {
+            console.error("Gagal menghitung ulang rute:", error);
+        } finally {
+            setIsRerouting(false);
+        }
+    };
+
+    useEffect(() => {
+        async function fetchRoadHazards() {
+            try {
+                const response = await getRoadHazards();
+                setRoadHazards(response.data.features);
+            } catch (error) {
+                console.error("Gagal mengambil data jalan rusak:", error);
+            }
+        }
+
+        fetchRoadHazards();
+    }, []);
 
     const hazards = routeData
         ? Array.from(
@@ -239,7 +394,7 @@ export default function NavigasiPage() {
                                     value={form.origin}
                                     onSelect={(location) => updateForm("origin", location)}
                                     onUseCurrentLocation={handleUseCurrentLocation}
-                                    onPickFromMap={() => setMapTarget("origin")}
+                                    onPickFromMap={() => handleOpenMapPicker("origin")}
                                     isGettingLocation={isGettingLocation}
                                 />
 
@@ -248,7 +403,7 @@ export default function NavigasiPage() {
                                     placeholder="Cari jalan atau tempat tujuan"
                                     value={form.destination}
                                     onSelect={(location) => updateForm("destination", location)}
-                                    onPickFromMap={() => setMapTarget("destination")}
+                                    onPickFromMap={() => handleOpenMapPicker("destination")}
                                     isGettingLocation={isGettingLocation}
                                 />
 
@@ -327,9 +482,17 @@ export default function NavigasiPage() {
                             route={routeData?.route ?? null}
                             baseline={routeData?.baseline ?? null}
                             hazards={hazards}
+                            roadHazards={roadHazards}
                             origin={originCoordinates}
                             destination={destinationCoordinates}
+                            onReroute={handleReroute}
                         />
+
+                        {isRerouting && (
+                            <p className="mt-2 text-sm font-medium text-blue-600">
+                                Menghitung ulang rute aman...
+                            </p>
+                        )}
 
                         {!routeData && (
                             <div className="mt-4 flex items-start gap-3 rounded-2xl border border-blue-100 bg-white p-4">
@@ -372,18 +535,7 @@ export default function NavigasiPage() {
 
             {mapTarget && (
                 <LocationPickerMap
-                    initialPosition={
-                        mapTarget === "origin"
-                            ? form.origin
-                                ? { lat: form.origin.lat, lng: form.origin.lng }
-                                : null
-                            : form.destination
-                                ? {
-                                    lat: form.destination.lat,
-                                    lng: form.destination.lng,
-                                }
-                                : null
-                    }
+                    initialPosition={pickerInitialPosition}
                     onClose={() => setMapTarget(null)}
                     onConfirm={handlePickFromMap}
                 />

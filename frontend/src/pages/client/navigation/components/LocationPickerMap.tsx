@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     CircleMarker,
     MapContainer,
@@ -12,10 +12,12 @@ import { REGION } from "../config/region";
 
 interface LocationPickerMapProps {
     onClose: () => void;
-    onConfirm: (location: Coordinates) => void;
+    onConfirm: (
+        location: Coordinates,
+        displayName: string,
+    ) => void;
     initialPosition?: Coordinates | null;
 }
-
 
 function MapClickHandler({
     position,
@@ -47,6 +49,20 @@ function MapClickHandler({
     ) : null;
 }
 
+function MapCenterController({
+    center,
+}: {
+    center: Coordinates;
+}) {
+    const map = useMapEvents({});
+
+    useEffect(() => {
+        map.setView([center.lat, center.lng], 17);
+    }, [map, center.lat, center.lng]);
+
+    return null;
+}
+
 export default function LocationPickerMap({
     onClose,
     onConfirm,
@@ -55,6 +71,39 @@ export default function LocationPickerMap({
     const [position, setPosition] = useState<Coordinates | null>(
         initialPosition ?? null,
     );
+
+    const [mapCenter, setMapCenter] = useState<Coordinates>(
+        initialPosition ?? {
+            lat: REGION.center[0],
+            lng: REGION.center[1],
+        },
+    );
+
+    const [locationName, setLocationName] = useState("");
+    const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+
+    useEffect(() => {
+        if (initialPosition || !navigator.geolocation) {
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+                setMapCenter({
+                    lat: coords.latitude,
+                    lng: coords.longitude,
+                });
+            },
+            () => {
+                // Jika akses lokasi ditolak, gunakan pusat wilayah sebagai cadangan.
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 30000,
+            },
+        );
+    }, [initialPosition]);
 
     return (
         <div
@@ -89,10 +138,10 @@ export default function LocationPickerMap({
 
                 <div className="relative z-0 h-[50vh] min-h-[280px]">
                     <MapContainer
-                        center={REGION.center}
-                        zoom={13}
-                        minZoom={11}
-                        maxZoom={18}
+                        center={[mapCenter.lat, mapCenter.lng]}
+                        zoom={17}
+                        minZoom={15}
+                        maxZoom={19}
                         maxBounds={REGION.bounds}
                         maxBoundsViscosity={1}
                         scrollWheelZoom
@@ -103,9 +152,51 @@ export default function LocationPickerMap({
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
 
+                        <MapCenterController center={mapCenter} />
+
                         <MapClickHandler
                             position={position}
-                            onChange={setPosition}
+                            onChange={(nextPosition) => {
+                                setPosition(nextPosition);
+                                setIsLoadingAddress(true);
+                                setLocationName("Mencari nama jalan...");
+
+                                fetch(
+                                    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${nextPosition.lat}&lon=${nextPosition.lng}&zoom=18&addressdetails=1`,
+                                    {
+                                        headers: {
+                                            Accept: "application/json",
+                                        },
+                                    },
+                                )
+                                    .then((response) => {
+                                        if (!response.ok) {
+                                            throw new Error("Gagal mencari alamat.");
+                                        }
+
+                                        return response.json();
+                                    })
+                                    .then((data) => {
+                                        const address = data.address;
+                                        const road =
+                                            address?.road ||
+                                            address?.pedestrian ||
+                                            address?.residential ||
+                                            address?.footway;
+
+                                        setLocationName(
+                                            road
+                                                ? `${road}${address?.suburb ? `, ${address.suburb}` : ""}${address?.city_district ? `, ${address.city_district}` : ""}`
+                                                : data.display_name || "Nama jalan tidak ditemukan",
+                                        );
+                                    })
+                                    .catch(() => {
+                                        setLocationName("Nama jalan tidak dapat ditemukan.");
+                                    })
+                                    .finally(() => {
+                                        setIsLoadingAddress(false);
+                                    });
+                            }}
                         />
                     </MapContainer>
 
@@ -122,7 +213,12 @@ export default function LocationPickerMap({
                                 <p className="font-semibold text-slate-800">
                                     Titik terpilih
                                 </p>
-                                <p className="mt-1 break-all text-xs text-slate-500">
+                                <p className="mt-1 text-sm text-slate-600">
+                                    {isLoadingAddress
+                                        ? "Mencari nama jalan..."
+                                        : locationName || "Nama jalan tidak tersedia"}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-400">
                                     {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
                                 </p>
                             </>
@@ -144,9 +240,14 @@ export default function LocationPickerMap({
 
                         <button
                             type="button"
-                            disabled={!position}
+                            disabled={!position || isLoadingAddress}
                             onClick={() => {
-                                if (position) onConfirm(position);
+                                if (position) {
+                                    onConfirm(
+                                        position,
+                                        locationName || "Lokasi terpilih",
+                                    );
+                                }
                             }}
                             className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
                         >
