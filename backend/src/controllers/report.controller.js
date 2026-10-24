@@ -6,7 +6,7 @@ import { MAX_IMAGES } from "../middlewares/upload.js";
 import { success, created, error } from "../utils/responseFormatter.js";
 import { getPagination, buildMeta } from "../utils/paginator.js";
 import { removeFiles } from "../utils/file.js";
-import { resolveAddress } from "../services/geoCode.js";
+import { resolveLocation } from "../services/geoCode.js";
 
 const STAFF_ROLES = ["admin", "petugas"];
 const canManage = (user, report) =>
@@ -14,6 +14,7 @@ const canManage = (user, report) =>
 
 const toImagePaths = (files = []) => files.map((f) => `uploads/reports/${f.filename}`);
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const REGION_FIELDS = ["street", "village", "district", "regency", "province"];
 
 // Mengubah latitude dan longitude dari body (string) menjadi GeoJSON Point.
 // Mengembalikan: GeoJSON Point jika valid, null jika tidak dikirim/bukan angka, undefined jika di luar rentang.
@@ -95,6 +96,50 @@ export const getReportById = async (req, res, next) => {
   }
 };
 
+// GET /api/reports/summary
+export const getReportSummary = async (req, res, next) => {
+  try {
+    const { status, severity, groupBy } = req.query;
+
+    if (groupBy && !REGION_FIELDS.includes(groupBy)) {
+      return error(res, {
+        message: `groupBy tidak valid. Pilihan: ${REGION_FIELDS.join(", ")}`,
+        statusCode: 400,
+      });
+    }
+
+    const match = {};
+
+    if (status) match.status = status;
+    if (severity) match.severity = severity;
+
+    const fields = groupBy ? [groupBy] : REGION_FIELDS;
+
+    const facets = {};
+    fields.forEach((f) => {
+      facets[f] = [
+        { $match: { [f]: { $ne: null } } },
+        { $group: { _id: `$${f}`, total: { $sum: 1 } } },
+        { $sort: { total: -1, _id: 1 } },
+        { $project: { _id: 0, name: "$_id", total: 1 } },
+      ];
+    });
+
+    const [data, totalReports] = await Promise.all([
+      Report.aggregate([{ $match: match }, { $facet: facets }]).then((r) => r[0]),
+      Report.countDocuments(match),
+    ]);
+
+    return success(res, {
+      message: "Ringkasan laporan berhasil diambil",
+      data,
+      meta: { groupBy: groupBy || null, totalReports },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // POST /api/reports
 export const createReport = async (req, res, next) => {
   const images = toImagePaths(req.files);
@@ -124,10 +169,10 @@ export const createReport = async (req, res, next) => {
     payload.location = location;
 
     // Alamat opsional: jika FE tidak mengirim address, isi otomatis dari koordinat (reverse geocoding OSM).
-    if (!payload.address) {
-      const [lng, lat] = location.coordinates;
-      payload.address = await resolveAddress(lat, lng);
-    }
+    const [lng, lat] = location.coordinates;
+    const { address: geoAddress, ...regions } = await resolveLocation(lat, lng);
+    Object.assign(payload, regions);
+    if (!payload.address) payload.address = geoAddress;
 
     const report = await Report.create(payload);
     return created(res, { message: "Laporan berhasil dibuat", data: report });
@@ -197,11 +242,11 @@ export const updateReport = async (req, res, next) => {
       report.location = location;
 
       // Lokasi berubah dan address tidak ikut dikirim: perbarui alamat dari koordinat baru.
+      const [lng, lat] = location.coordinates;
+      const { address: geoAddress, ...regions } = await resolveLocation(lat, lng);
+      report.set(regions);
       const addressSent = typeof body.address === "string" && body.address.trim() !== "";
-      if (!addressSent) {
-        const [lng, lat] = location.coordinates;
-        report.address = await resolveAddress(lat, lng);
-      }
+      if (!addressSent) report.address = geoAddress;
     }
 
     report.images = [...remaining, ...newImages];

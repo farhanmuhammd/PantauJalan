@@ -4,6 +4,7 @@ import { authenticate } from "../middlewares/auth.js";
 import {
   getReports,
   getReportById,
+  getReportSummary,
   createReport,
   updateReport,
   deleteReport,
@@ -12,6 +13,7 @@ import {
 const router = Router();
 
 router.get("/", getReports);
+router.get("/summary", getReportSummary);
 router.get("/:id", getReportById);
 
 // authenticate sebelum upload agar request tanpa token tidak menyimpan file ke disk

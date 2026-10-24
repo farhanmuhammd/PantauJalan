@@ -32,24 +32,28 @@ const cacheKey = (lat, lng) => `${lat.toFixed(5)},${lng.toFixed(5)}`;
 const first = (...values) => values.find((v) => typeof v === "string" && v.trim() !== "");
 
 /** Susun alamat singkat dari komponen Nominatim, mis. "Jalan Sunggal, Sei Sikambing B, Medan Sunggal, Medan, Sumatera Utara". */
-export const formatAddress = (data) => {
-  const a = data?.address;
-  if (a) {
-    const parts = [
-      first(a.road, a.pedestrian, a.footway, a.path),
-      first(a.neighbourhood, a.quarter, a.suburb, a.village, a.hamlet),
-      first(a.city_district, a.municipality, a.district),
-      first(a.city, a.town, a.county, a.regency),
-      a.state,
-    ].filter(Boolean);
-    const unique = parts.filter((p, i) => p !== parts[i - 1]);
-    if (unique.length > 0) return unique.join(", ");
-  }
+/** Pecah hasil Nominatim menjadi 5 blok. Blok yang tidak ada menjadi null. */
+export const extractParts = (data) => {
+  const a = data?.address ?? {};
+  return {
+    street: first(a.road, a.pedestrian, a.footway, a.path) ?? null,
+    village: first(a.village, a.suburb, a.neighbourhood, a.quarter, a.hamlet) ?? null,
+    district: first(a.city_district, a.municipality, a.district) ?? null,
+    regency: first(a.city, a.town, a.county, a.regency) ?? null,
+    province: first(a.state) ?? null,
+  };
+};
+
+/** Gabungkan blok menjadi satu alamat, mis. "Jalan Tri Dharma, Padang Bulan, Medan Baru, Kota Medan, Sumatera Utara". */
+export const formatAddress = (parts, data) => {
+  const list = [parts.street, parts.village, parts.district, parts.regency, parts.province].filter(Boolean);
+  const unique = list.filter((p, i) => p !== list[i - 1]);
+  if (unique.length > 0) return unique.join(", ");
   return first(data?.display_name) ?? null;
 };
 
-/** Alamat dari koordinat, atau null jika gagal (jaringan, timeout, lokasi tidak dikenal). Tidak pernah melempar error. */
-export const reverseGeocode = async (lat, lng) => {
+// Hasil lookup: { address, street, village, district, regency, province }, atau null jika gagal.
+const lookup = async (lat, lng) => {
   const key = cacheKey(lat, lng);
   if (cache.has(key)) return cache.get(key);
 
@@ -80,18 +84,33 @@ export const reverseGeocode = async (lat, lng) => {
     });
     if (!data || data.error) return null;
 
-    const address = formatAddress(data);
-    if (address) {
-      if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
-      cache.set(key, address);
-    }
-    return address;
+    const parts = extractParts(data);
+    const address = formatAddress(parts, data);
+    if (!address) return null;
+
+    const result = { address, ...parts };
+    if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
+    cache.set(key, result);
+    return result;
   } catch (err) {
     console.warn("[geocode] reverse geocoding gagal:", err.message);
     return null;
   }
 };
 
-/** Alamat untuk disimpan di laporan. Jika geocoding gagal, pakai teks koordinat agar laporan tetap bisa dibuat. */
-export const resolveAddress = async (lat, lng) =>
-  (await reverseGeocode(lat, lng)) ?? `Koordinat ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+/** Alamat dari koordinat, atau null jika gagal. Tidak pernah melempar error. */
+export const reverseGeocode = async (lat, lng) => (await lookup(lat, lng))?.address ?? null;
+
+/** Alamat plus 5 blok wilayah. Jika gagal, alamat berisi teks koordinat dan semua blok null. */
+export const resolveLocation = async (lat, lng) =>
+  (await lookup(lat, lng)) ?? {
+    address: `Koordinat ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    street: null,
+    village: null,
+    district: null,
+    regency: null,
+    province: null,
+  };
+
+/** Tetap dipertahankan untuk kompatibilitas. */
+export const resolveAddress = async (lat, lng) => (await resolveLocation(lat, lng)).address;
