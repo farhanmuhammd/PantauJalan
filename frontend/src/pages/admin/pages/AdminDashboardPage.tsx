@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Activity,
   ArrowUpRight,
@@ -19,6 +20,7 @@ import RegionDistributionCard from "./dashboard/components/RegionDistributionCar
 import ReportTypeChart from "./dashboard/components/ReportTypeChart";
 
 export default function AdminDashboardPage() {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState<ReportSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,28 +56,28 @@ export default function AdminDashboardPage() {
 
   const cards = [
     {
-      label: "Total laporan",
+      label: t("reports.totalReports", "Total laporan"),
       value: summary?.meta.totalReports ?? 0,
       description: "Seluruh laporan masyarakat",
       icon: FileText,
       style: "bg-emerald-50 text-emerald-700",
     },
     {
-      label: "Menunggu",
+      label: t("status.menunggu", "Menunggu"),
       value: statusCount("menunggu"),
       description: "Perlu ditindaklanjuti",
       icon: Clock3,
       style: "bg-amber-50 text-amber-700",
     },
     {
-      label: "Sedang diproses",
+      label: t("status.diproses", "Sedang diproses"),
       value: statusCount("diproses"),
       description: "Dalam penanganan petugas",
       icon: Activity,
       style: "bg-lime-50 text-lime-700",
     },
     {
-      label: "Selesai",
+      label: t("status.selesai", "Selesai"),
       value: statusCount("selesai"),
       description: "Penanganan telah selesai",
       icon: CheckCircle2,

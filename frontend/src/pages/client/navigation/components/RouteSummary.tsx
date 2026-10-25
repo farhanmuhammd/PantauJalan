@@ -1,5 +1,6 @@
 
 import { AlertTriangle, CarFront, Clock3, Route as RouteIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { SafeRouteData } from "../types/routes.types";
 
 interface RouteSummaryProps {
@@ -27,6 +28,7 @@ const formatDuration = (seconds: number) => {
 };
 
 export default function RouteSummary({ data }: RouteSummaryProps) {
+    const { t } = useTranslation();
     const avoided = data.avoided ?? [];
     const isRedirected = data.status === "dialihkan";
 
@@ -35,7 +37,7 @@ export default function RouteSummary({ data }: RouteSummaryProps) {
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="text-sm font-medium text-slate-500">
-                        Ringkasan rute
+                        {t("navigation.routeSummary", "Ringkasan rute")}
                     </p>
                     <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                         <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -55,15 +57,15 @@ export default function RouteSummary({ data }: RouteSummaryProps) {
             <div className="mt-5 grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-slate-50 p-3">
                     <CarFront size={18} className="text-slate-500" />
-                    <p className="mt-2 text-xs text-slate-500">Kendaraan</p>
+                    <p className="mt-2 text-xs text-slate-500">{t("navigation.vehicleLabel", "Kendaraan")}</p>
                     <p className="mt-1 text-sm font-semibold capitalize text-slate-800">
-                        {data.vehicle.replace("_", " ")}
+                        {t(`vehicle.${data.vehicle}`, data.vehicle.replace("_", " "))}
                     </p>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-3">
                     <Clock3 size={18} className="text-slate-500" />
-                    <p className="mt-2 text-xs text-slate-500">Estimasi waktu</p>
+                    <p className="mt-2 text-xs text-slate-500">{t("navigation.duration", "Estimasi waktu")}</p>
                     <p className="mt-1 text-sm font-semibold text-slate-800">
                         {formatDuration(data.route.duration)}
                     </p>
@@ -77,7 +79,7 @@ export default function RouteSummary({ data }: RouteSummaryProps) {
                     </span>
                     <div>
                         <p className="text-sm font-semibold text-emerald-800">
-                            Rute dialihkan
+                            {t("navigation.safeRoute", "Rute dialihkan")}
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-emerald-700">
                             {data.message ||
@@ -90,11 +92,11 @@ export default function RouteSummary({ data }: RouteSummaryProps) {
             {data.baseline && (
                 <div className="mt-5 border-t border-slate-100 pt-4">
                     <p className="mb-3 text-sm font-semibold text-slate-800">
-                        Perbandingan rute
+                        {t("navigation.baselineRoute", "Perbandingan rute")}
                     </p>
 
                     <div className="flex items-center justify-between gap-3 text-sm">
-                        <span className="text-slate-500">Rute pembanding</span>
+                        <span className="text-slate-500">{t("navigation.baselineRoute", "Rute pembanding")}</span>
                         <span className="font-medium text-slate-700">
                             {formatDistance(data.baseline.distance)} ·{" "}
                             {formatDuration(data.baseline.duration)}
@@ -108,7 +110,7 @@ export default function RouteSummary({ data }: RouteSummaryProps) {
                     <div className="mb-3 flex items-center gap-2">
                         <AlertTriangle size={17} className="text-red-500" />
                         <h3 className="text-sm font-semibold text-slate-800">
-                            Jalan yang dihindari ({avoided.length})
+                            {t("navigation.hazardsAvoided", "Jalan yang dihindari")} ({avoided.length})
                         </h3>
                     </div>
 
@@ -121,7 +123,7 @@ export default function RouteSummary({ data }: RouteSummaryProps) {
                                         {hazard.title}
                                     </p>
                                     <p className="mt-0.5 text-xs text-slate-500">
-                                        {hazard.address} · Keparahan {hazard.severity}
+                                        {hazard.address} · {t("common.severity", "Keparahan")} {t(`severity.${hazard.severity}`, hazard.severity)}
                                     </p>
                                 </div>
                             </li>

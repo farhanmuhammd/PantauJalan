@@ -1,8 +1,9 @@
 import { useRef } from "react";
 import { m, useReducedMotion, useScroll } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import Reveal from "./Reveal";
 
-const steps = [
+const defaultSteps = [
     {
         title: "Laporkan kerusakan",
         text: "Isi formulir singkat, unggah foto, dan tandai lokasinya langsung dari ponselmu.",
@@ -22,12 +23,18 @@ const steps = [
 ];
 
 export default function HowItWorksSection() {
+    const { t } = useTranslation();
     const ref = useRef<HTMLOListElement>(null);
     const reduce = useReducedMotion();
     const { scrollYProgress } = useScroll({
         target: ref,
         offset: ["start 65%", "end 70%"],
     });
+
+    const stepsObj = t("home.howItWorks.steps", { returnObjects: true });
+    const steps = Array.isArray(stepsObj) && stepsObj.length > 0
+        ? (stepsObj as { title: string; desc: string }[]).map((s) => ({ title: s.title, text: s.desc }))
+        : defaultSteps;
 
     return (
         <section
@@ -38,11 +45,10 @@ export default function HowItWorksSection() {
                 <div className="lg:sticky lg:top-28 lg:self-start">
                     <Reveal>
                         <h2 className="text-3xl font-semibold leading-[1.1] tracking-[-0.03em] sm:text-5xl">
-                            Dari laporan sampai selesai.
+                            {t("home.howItWorks.title", "Dari laporan sampai selesai.")}
                         </h2>
                         <p className="mt-5 max-w-sm text-base leading-7 text-[#4b5d55]">
-                            Empat langkah, tanpa harus bingung mencari
-                            tempat pengaduan.
+                            {t("home.howItWorks.subtitle", "Empat langkah, tanpa harus bingung mencari tempat pengaduan.")}
                         </p>
                     </Reveal>
                 </div>

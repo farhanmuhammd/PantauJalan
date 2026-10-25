@@ -1,9 +1,11 @@
 import { m, useReducedMotion } from "framer-motion";
+import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { NavScreen } from "./AppScreens";
 import PhoneFrame from "./PhoneFrame";
 import Reveal from "./Reveal";
 
-const highlights = [
+const defaultHighlights = [
     {
         title: "Navigasi real-time",
         text: "Ikuti arah perjalanan dengan panduan yang mudah dipahami.",
@@ -18,7 +20,7 @@ const highlights = [
     },
 ];
 
-const features = [
+const defaultFeatures = [
     "Peta interaktif berbasis Leaflet & OpenStreetMap",
     "Titik kerusakan yang sudah diverifikasi tampil di peta",
     "Rute alternatif untuk menghindari jalan rusak",
@@ -26,6 +28,7 @@ const features = [
 ];
 
 function MapMock() {
+    const { t } = useTranslation();
     const reduce = useReducedMotion();
 
     return (
@@ -102,83 +105,34 @@ function MapMock() {
                 <circle
                     cx="365"
                     cy="50"
-                    r="15"
-                    fill="#25bd7b"
-                    fillOpacity="0.15"
-                />
-                <circle
-                    cx="365"
-                    cy="50"
-                    r="7"
-                    fill="#25bd7b"
-                    stroke="#ffffff"
-                    strokeWidth="2"
+                    r="9"
+                    fill="#ffffff"
+                    stroke="#25bd7b"
+                    strokeWidth="3"
                 />
 
-                {/* Titik jalan rusak */}
-                <circle
-                    cx="170"
-                    cy="170"
-                    r="17"
-                    fill="#ff6b57"
-                    fillOpacity="0.18"
-                />
-                <circle
-                    cx="170"
-                    cy="170"
-                    r="7"
-                    fill="#ff6b57"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                />
+                {/* Marker kerusakan jalan */}
+                <g transform="translate(190, 170)">
+                    <circle cx="0" cy="0" r="10" fill="#ff6b57" fillOpacity="0.2" />
+                    <circle cx="0" cy="0" r="5" fill="#ff6b57" />
+                </g>
+
+                <g transform="translate(260, 240)">
+                    <circle cx="0" cy="0" r="10" fill="#ff6b57" fillOpacity="0.2" />
+                    <circle cx="0" cy="0" r="5" fill="#ff6b57" />
+                </g>
             </svg>
-
-            {/* Informasi jalan rusak */}
-            <m.div
-                initial={reduce ? false : { opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{
-                    delay: 0.9,
-                    duration: 0.5,
-                }}
-                className="absolute left-[30%] top-[58%] w-[min(200px,65%)] rounded-2xl border border-[#e5eee7] bg-white/95 p-3.5 text-[#163b2b] shadow-lg backdrop-blur-sm"
-            >
-                <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#ff6b57]" />
-                    <p className="text-xs font-semibold">
-                        Jalan rusak{" "}
-                        <span className="text-[#e5483a]">
-                            · Berat
-                        </span>
-                    </p>
-                </div>
-
-                <p className="mt-2 text-[11px] leading-4 text-[#617368]">
-                    250 m di depan · Terverifikasi
-                </p>
-            </m.div>
-
-            {/* Ringkasan rute */}
-            <div className="absolute left-4 top-4 rounded-2xl border border-[#dceee2] bg-white/95 px-4 py-3 text-[#163b2b] shadow-sm backdrop-blur-sm">
-                <p className="text-[11px] text-[#617368]">
-                    Rute alternatif
-                </p>
-                <p className="mt-0.5 text-sm font-semibold">
-                    12 km · 25 menit
-                </p>
-            </div>
 
             {/* Legenda */}
             <div className="absolute bottom-4 left-4 flex flex-wrap gap-x-4 gap-y-2 rounded-xl border border-[#dceee2] bg-white/90 px-3 py-2 text-[11px] text-[#52665a] shadow-sm backdrop-blur-sm">
                 <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-[#25bd7b]" />
-                    Rute utama
+                    {t("navigation.baselineRoute", "Rute utama")}
                 </span>
 
                 <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-[#ff6b57]" />
-                    Jalan rusak
+                    {t("home.navigationFeature.mapLegend.damagedRoad", "Jalan rusak")}
                 </span>
             </div>
         </div>
@@ -186,6 +140,18 @@ function MapMock() {
 }
 
 export default function NavigationFeatureSection() {
+    const { t } = useTranslation();
+
+    const highlightsObj = t("home.navigationFeature.highlights", { returnObjects: true });
+    const highlights = Array.isArray(highlightsObj) && highlightsObj.length > 0
+        ? (highlightsObj as { title: string; desc: string }[]).map((h) => ({ title: h.title, text: h.desc }))
+        : defaultHighlights;
+
+    const featuresObj = t("home.navigationFeature.features", { returnObjects: true });
+    const features = Array.isArray(featuresObj) && featuresObj.length > 0
+        ? (featuresObj as string[])
+        : defaultFeatures;
+
     return (
         <section
             id="fitur"
@@ -196,20 +162,18 @@ export default function NavigationFeatureSection() {
                 <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
                     <Reveal>
                         <p className="text-sm font-medium text-[#21875a]">
-                            Fitur navigasi
+                            {t("home.navigationFeature.tag", "Fitur navigasi")}
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold leading-[1.1] tracking-[-0.03em] text-[#163b2b] sm:text-5xl">
-                            Temukan rute terbaik, hindari jalan rusak.
+                            {t("home.navigationFeature.title", "Temukan rute terbaik, hindari jalan rusak.")}
                         </h2>
 
                         <p className="mt-5 max-w-xl text-base leading-7 text-[#52665a]">
-                            Masukkan lokasi awal dan tujuan, lalu biarkan
-                            PantauJalan membantu kamu memahami kondisi
-                            perjalanan dan menemukan jalur alternatif.
-                            Navigasi ini tidak hanya mengarahkan, tetapi juga
-                            memberi tahu jalan mana yang rusak sebelum kamu
-                            melewatinya.
+                            {t(
+                                "home.navigationFeature.desc",
+                                "Masukkan lokasi awal dan tujuan, lalu biarkan PantauJalan membantu kamu memahami kondisi perjalanan dan menemukan jalur alternatif. Navigasi ini tidak hanya mengarahkan, tetapi juga memberi tahu jalan mana yang rusak sebelum kamu melewatinya."
+                            )}
                         </p>
                     </Reveal>
 
@@ -288,11 +252,11 @@ export default function NavigationFeatureSection() {
                 </div>
 
                 {/* CTA */}
-                <a
-                    href="/maps"
+                <Link
+                    to="/navigasi"
                     className="mt-12 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25bd7b] focus-visible:ring-offset-4"
                 >
-                    Coba navigasi sekarang
+                    {t("home.navigationFeature.cta", "Coba navigasi sekarang")}
 
                     <span
                         aria-hidden="true"
@@ -300,7 +264,7 @@ export default function NavigationFeatureSection() {
                     >
                         →
                     </span>
-                </a>
+                </Link>
             </div>
         </section>
     );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,13 +11,21 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import LanguageSwitcher from "../../../components/LanguageSwitcher";
 import { clearAdminSession, getAdminUser } from "../utils/auth-storage";
 
 const navItems = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
+  {
+    to: "/admin",
+    labelKey: "nav.dashboard",
+    defaultLabel: "Dashboard",
+    icon: LayoutDashboard,
+    end: true,
+  },
   {
     to: "/admin/reports",
-    label: "Laporan Pengaduan",
+    labelKey: "nav.adminReports",
+    defaultLabel: "Laporan Pengaduan",
     icon: ClipboardList,
     end: false,
   },
@@ -30,6 +39,7 @@ type SidebarProps = {
 };
 
 function Sidebar({ compact, userName, onNavigate, onLogout }: SidebarProps) {
+  const { t } = useTranslation();
   const initial = userName.slice(0, 1).toUpperCase();
 
   return (
@@ -47,7 +57,7 @@ function Sidebar({ compact, userName, onNavigate, onLogout }: SidebarProps) {
             <p className="text-[15px] font-extrabold tracking-tight text-slate-900">
               Pantau<span className="text-emerald-600">Jalan</span>
             </p>
-            <p className="text-xs text-slate-500">Panel admin</p>
+            <p className="text-xs text-slate-500">{t("nav.adminPanel", "Panel admin")}</p>
           </div>
         )}
       </div>
@@ -55,46 +65,49 @@ function Sidebar({ compact, userName, onNavigate, onLogout }: SidebarProps) {
       {/* Menu */}
       <nav aria-label="Menu admin" className="flex-1 overflow-y-auto px-3 py-5">
         {!compact && (
-          <p className="mb-2 px-3 text-xs font-medium text-slate-400">Menu</p>
+          <p className="mb-2 px-3 text-xs font-medium text-slate-400">{t("nav.menu", "Menu")}</p>
         )}
         <ul className="space-y-1">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={end}
-                title={compact ? label : undefined}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `group relative flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${compact ? "justify-center px-0" : "px-3"
-                  } ${isActive
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-emerald-600"
+          {navItems.map(({ to, labelKey, defaultLabel, icon: Icon, end }) => {
+            const label = t(labelKey, defaultLabel);
+            return (
+              <li key={to}>
+                <NavLink
+                  to={to}
+                  end={end}
+                  title={compact ? label : undefined}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    `group relative flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${compact ? "justify-center px-0" : "px-3"
+                    } ${isActive
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-emerald-600"
+                        />
+                      )}
+                      <Icon
+                        size={19}
+                        className={
+                          isActive
+                            ? "text-emerald-600"
+                            : "text-slate-400 group-hover:text-slate-600"
+                        }
                       />
-                    )}
-                    <Icon
-                      size={19}
-                      className={
-                        isActive
-                          ? "text-emerald-600"
-                          : "text-slate-400 group-hover:text-slate-600"
-                      }
-                    />
-                    {!compact && <span className="flex-1">{label}</span>}
-                  </>
-                )}
-              </NavLink>
-            </li>
-          ))}
+                      {!compact && <span className="flex-1">{label}</span>}
+                    </>
+                  )}
+                </NavLink>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
@@ -120,13 +133,13 @@ function Sidebar({ compact, userName, onNavigate, onLogout }: SidebarProps) {
         <button
           type="button"
           onClick={onLogout}
-          title="Keluar"
-          aria-label="Keluar dari akun"
+          title={t("nav.logout", "Keluar")}
+          aria-label={t("nav.logout", "Keluar dari akun")}
           className={`mt-1 flex w-full items-center gap-3 rounded-xl py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 ${compact ? "justify-center px-0" : "px-3"
             }`}
         >
           <LogOut size={18} />
-          {!compact && "Keluar"}
+          {!compact && t("nav.logout", "Keluar")}
         </button>
       </div>
     </aside>
@@ -134,6 +147,7 @@ function Sidebar({ compact, userName, onNavigate, onLogout }: SidebarProps) {
 }
 
 export default function AdminLayout() {
+  const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
@@ -146,7 +160,9 @@ export default function AdminLayout() {
       ? location.pathname === item.to
       : location.pathname.startsWith(item.to),
   );
-  const pageTitle = currentItem?.label ?? "Dashboard";
+  const pageTitle = currentItem
+    ? t(currentItem.labelKey, currentItem.defaultLabel)
+    : t("nav.dashboard", "Dashboard");
 
   // Tutup drawer saat pindah halaman
   useEffect(() => {
@@ -260,16 +276,19 @@ export default function AdminLayout() {
             </div>
           </div>
 
-          <div className="hidden items-center gap-3 sm:flex">
-            <div className="text-right">
-              <p className="text-sm font-semibold leading-tight text-slate-800">
-                {userName}
-              </p>
-              <p className="text-xs text-slate-500">Administrator</p>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="admin" />
+            <div className="hidden items-center gap-3 sm:flex">
+              <div className="text-right">
+                <p className="text-sm font-semibold leading-tight text-slate-800">
+                  {userName}
+                </p>
+                <p className="text-xs text-slate-500">Administrator</p>
+              </div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                {userName.slice(0, 1).toUpperCase()}
+              </span>
             </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-              {userName.slice(0, 1).toUpperCase()}
-            </span>
           </div>
         </header>
 

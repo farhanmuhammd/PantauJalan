@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     AlertCircle,
     ArrowDownUp,
@@ -76,6 +77,7 @@ function formatReportType(type: string) {
 }
 
 function ReportCard({ report }: { report: ReportItem }) {
+    const { t } = useTranslation();
     const image = report.images?.[0];
     const navigate = useNavigate();
 
@@ -97,20 +99,20 @@ function ReportCard({ report }: { report: ReportItem }) {
                 ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
                         <FileText size={30} strokeWidth={1.5} />
-                        <span className="text-xs">Tidak ada foto</span>
+                        <span className="text-xs">{t("reports.detail.photos", "Tidak ada foto")}</span>
                     </div>
                 )}
 
                 <div className="absolute left-3 top-3 flex flex-wrap gap-2">
                     <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-sm">
-                        {formatReportType(report.type)}
+                        {t(`type.${report.type}`, formatReportType(report.type))}
                     </span>
 
                     <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${severityStyles[report.severity] ?? severityStyles.sedang
                             }`}
                     >
-                        Kerusakan {formatSeverity(report.severity)}
+                        {t("common.severity", "Kerusakan")} {t(`severity.${report.severity}`, formatSeverity(report.severity))}
                     </span>
                 </div>
             </div>
@@ -125,7 +127,7 @@ function ReportCard({ report }: { report: ReportItem }) {
                         className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[report.status]
                             }`}
                     >
-                        {statusLabels[report.status]}
+                        {t(`status.${report.status}`, statusLabels[report.status])}
                     </span>
                 </div>
 
@@ -141,7 +143,7 @@ function ReportCard({ report }: { report: ReportItem }) {
 
                     <div className="flex items-center gap-2 text-xs text-slate-400">
                         <CalendarDays size={14} />
-                        <span>Dilaporkan {formatDate(report.createdAt)}</span>
+                        <span>{t("reports.detail.reportedAt", "Dilaporkan")} {formatDate(report.createdAt)}</span>
                     </div>
                 </div>
             </div>
@@ -377,6 +379,7 @@ function Mascot() {
 }
 
 function AddReportFloatingButton() {
+    const { t } = useTranslation();
     const reduceMotion = useReducedMotion();
     const [showBubble, setShowBubble] = useState(false);
 
@@ -417,9 +420,9 @@ function AddReportFloatingButton() {
                         role="status"
                         className="relative hidden max-w-[240px] rounded-2xl border border-emerald-100 bg-white py-3 pl-4 pr-9 shadow-lg shadow-emerald-900/10 sm:block"
                     >
-                        <p className="text-xs text-slate-500">Ada pengaduan?</p>
+                        <p className="text-xs text-slate-500">{t("home.finalCta.bubbleQuestion", "Ada pengaduan?")}</p>
                         <p className="text-sm font-semibold text-slate-800">
-                            Yuk, sampaikan di sini.
+                            {t("home.finalCta.bubbleAction", "Yuk, sampaikan di sini.")}
                         </p>
 
                         <button
@@ -479,10 +482,10 @@ function AddReportFloatingButton() {
 
                     <span className="relative flex flex-col gap-0.5">
                         <span className="whitespace-nowrap text-sm font-bold sm:text-base">
-                            Buat Laporan
+                            {t("nav.reportNow", "Buat Laporan")}
                         </span>
                         <span className="hidden whitespace-nowrap text-xs text-emerald-100 sm:block">
-                            Sampaikan pengaduanmu
+                            {t("reports.subtitle", "Sampaikan pengaduanmu")}
                         </span>
                     </span>
 
@@ -498,6 +501,7 @@ function AddReportFloatingButton() {
 
 
 export default function ReportListPage() {
+    const { t } = useTranslation();
     const [reports, setReports] = useState<ReportItem[]>([]);
     const [districts, setDistricts] = useState<ReportSummaryItem[]>([]);
     const [totalReports, setTotalReports] = useState(0);
@@ -663,14 +667,14 @@ export default function ReportListPage() {
                         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                             {[
                                 {
-                                    label: "Total Laporan",
+                                    label: t("reports.totalReports", "Total Laporan"),
                                     value: totalLaporan,
                                     description: "Menunggu, diproses, dan selesai",
                                     color: "indigo",
                                     icon: FileText,
                                 },
                                 {
-                                    label: "Menunggu",
+                                    label: t("status.menunggu", "Menunggu"),
                                     value:
                                         statusSummary.find(
                                             (item) => item.status === "menunggu",
@@ -680,7 +684,7 @@ export default function ReportListPage() {
                                     icon: Clock3,
                                 },
                                 {
-                                    label: "Sedang Diproses",
+                                    label: t("status.diproses", "Sedang Diproses"),
                                     value:
                                         statusSummary.find(
                                             (item) => item.status === "diproses",
@@ -690,7 +694,7 @@ export default function ReportListPage() {
                                     icon: SlidersHorizontal,
                                 },
                                 {
-                                    label: "Selesai",
+                                    label: t("status.selesai", "Selesai"),
                                     value:
                                         statusSummary.find(
                                             (item) => item.status === "selesai",
@@ -770,10 +774,10 @@ export default function ReportListPage() {
                     <section>
                         <div className="mb-4">
                             <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                                Daftar Pengaduan
+                                {t("reports.listTitle", "Daftar Pengaduan")}
                             </h2>
                             <p className="mt-1 text-sm text-slate-500">
-                                Temukan laporan dan lihat status penanganannya.
+                                {t("reports.listSubtitle", "Temukan laporan dan lihat status penanganannya.")}
                             </p>
                         </div>
 
@@ -787,7 +791,7 @@ export default function ReportListPage() {
                                     type="search"
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
-                                    placeholder="Cari judul, lokasi, atau kata kunci..."
+                                    placeholder={t("reports.searchPlaceholder", "Cari judul, lokasi, atau kata kunci...")}
                                     className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
                                 />
                                 {search && (

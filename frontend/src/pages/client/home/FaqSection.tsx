@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import Reveal from "./Reveal";
 
-const faqs = [
+const defaultFaqs = [
     {
         q: "Apa saja yang bisa dilaporkan?",
         a: "Kerusakan fasilitas umum seperti jalan dan jembatan, lampu penerangan, drainase, trotoar, halte, taman, dan fasilitas publik lainnya.",
@@ -26,14 +27,20 @@ const faqs = [
 ];
 
 export default function FaqSection() {
+    const { t } = useTranslation();
     const [open, setOpen] = useState<number | null>(0);
+
+    const faqsObj = t("home.faq.items", { returnObjects: true });
+    const faqs = Array.isArray(faqsObj) && faqsObj.length > 0
+        ? (faqsObj as { q: string; a: string }[])
+        : defaultFaqs;
 
     return (
         <section id="faq" className="border-t border-[#dfeae3] py-20 sm:py-28">
             <div className="mx-auto grid max-w-6xl gap-10 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
                 <Reveal>
                     <h2 className="text-3xl font-semibold leading-[1.1] tracking-[-0.03em] sm:text-5xl">
-                        Pertanyaan umum.
+                        {t("home.faq.title", "Pertanyaan umum.")}
                     </h2>
                 </Reveal>
 

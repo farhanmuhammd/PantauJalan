@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 const links = [
     { label: "Aplikasi", href: "#aplikasi" },
     { label: "Kategori", href: "#kategori" },
@@ -14,6 +16,8 @@ const socials = [
 ];
 
 export default function Footer() {
+    const { t } = useTranslation();
+
     return (
         <footer className="border-t border-[#dfeae3] bg-[#f7fbf8]">
             <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
@@ -27,8 +31,7 @@ export default function Footer() {
                             Pantau<span className="text-[#0b7a52]">Jalan</span>
                         </a>
                         <p className="mt-3 text-sm leading-6 text-[#4b5d55]">
-                            Platform pelaporan kerusakan fasilitas umum untuk
-                            Kota Medan.
+                            {t("home.footerDesc", "Platform pelaporan kerusakan fasilitas umum untuk Kota Medan.")}
                         </p>
                     </div>
 
@@ -66,8 +69,7 @@ export default function Footer() {
                 </div>
 
                 <p className="mt-12 border-t border-[#dfeae3] pt-6 text-xs text-[#6b7c74]">
-                    © {new Date().getFullYear()} PantauJalan. Bersama untuk
-                    infrastruktur yang lebih baik.
+                    © {new Date().getFullYear()} PantauJalan. {t("home.footerRights", "Bersama untuk infrastruktur yang lebih baik.")}
                 </p>
             </div>
         </footer>

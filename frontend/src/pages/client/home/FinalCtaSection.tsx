@@ -1,33 +1,50 @@
+import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import Reveal from "./Reveal";
 
-const reports = [
+const defaultReports = [
     {
-        title: "Jalan berlubang",
+        titleKey: "type.jalan",
+        defaultTitle: "Jalan berlubang",
         place: "Jl. Gatot Subroto",
-        status: "Menunggu verifikasi",
+        statusKey: "home.hero.mockup.waitingVerification",
+        defaultStatus: "Menunggu verifikasi",
         chip: "bg-amber-100 text-amber-700",
         dot: "bg-amber-500",
         offset: "lg:translate-x-0 lg:-rotate-2",
     },
     {
-        title: "Lampu jalan padam",
+        titleKey: "type.lampu-jalan",
+        defaultTitle: "Lampu jalan padam",
         place: "Jl. Sisingamangaraja",
-        status: "Sedang dikerjakan",
+        statusKey: "home.hero.mockup.inProgress",
+        defaultStatus: "Sedang dikerjakan",
         chip: "bg-sky-100 text-sky-700",
         dot: "bg-sky-500",
         offset: "lg:translate-x-8 lg:rotate-1",
     },
     {
-        title: "Halte rusak",
+        titleKey: "type.halte",
+        defaultTitle: "Halte rusak",
         place: "Jl. Imam Bonjol",
-        status: "Selesai",
+        statusKey: "status.selesai",
+        defaultStatus: "Selesai",
         chip: "bg-emerald-100 text-emerald-700",
         dot: "bg-emerald-500",
         offset: "lg:translate-x-2 lg:-rotate-1",
     },
 ];
 
+const defaultChecklist = ["Tanpa biaya", "Cukup foto & lokasi", "Status bisa dipantau"];
+
 export default function FinalCtaSection() {
+    const { t } = useTranslation();
+
+    const checklistObj = t("home.finalCta.features", { returnObjects: true });
+    const checklist = Array.isArray(checklistObj) && checklistObj.length > 0
+        ? (checklistObj as string[])
+        : defaultChecklist;
+
     return (
         <section className="px-4 pb-16 sm:px-6 sm:pb-24">
             <Reveal y={20}>
@@ -60,21 +77,20 @@ export default function FinalCtaSection() {
                         {/* Teks */}
                         <div>
                             <h2 className="max-w-2xl text-3xl font-semibold leading-[1.08] tracking-[-0.035em] text-[#0b1d16] sm:text-6xl">
-                                Lihat yang rusak?
+                                {t("home.finalCta.titleLine1", "Lihat yang rusak?")}
                                 <br />
-                                Laporkan sekarang.
+                                {t("home.finalCta.titleLine2", "Laporkan sekarang.")}
                             </h2>
                             <p className="mt-5 max-w-md text-base leading-7 text-[#2f4a3e]">
-                                Jalan dan fasilitas yang baik adalah hak setiap
-                                orang. Mulai dari satu laporan.
+                                {t("home.finalCta.subtitle", "Jalan dan fasilitas yang baik adalah hak setiap orang. Mulai dari satu laporan.")}
                             </p>
 
                             <div className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-                                <a
-                                    href="/pengaduan"
+                                <Link
+                                    to="/form-pengaduan"
                                     className="group inline-flex items-center gap-3 rounded-full bg-emerald-600 py-2 pl-6 pr-2 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[#dcf6e8]"
                                 >
-                                    Buat laporan
+                                    {t("home.finalCta.btnReport", "Buat laporan")}
                                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-emerald-600 transition-transform duration-300 group-hover:translate-x-0.5">
                                         <svg
                                             viewBox="0 0 24 24"
@@ -87,38 +103,36 @@ export default function FinalCtaSection() {
                                             <path d="M5 12h14m-6-6 6 6-6 6" />
                                         </svg>
                                     </span>
-                                </a>
+                                </Link>
 
-                                <a
-                                    href="/reports"
+                                <Link
+                                    to="/pengaduan"
                                     className="rounded-full px-2 py-2 text-sm font-semibold text-emerald-800 underline-offset-4 transition-colors hover:text-emerald-950 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                                 >
-                                    Lihat laporan warga
-                                </a>
+                                    {t("home.finalCta.btnExplore", "Lihat laporan warga")}
+                                </Link>
                             </div>
 
                             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#2f4a3e]">
-                                {["Tanpa biaya", "Cukup foto & lokasi", "Status bisa dipantau"].map(
-                                    (item) => (
-                                        <li key={item} className="flex items-center gap-2">
-                                            <svg
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2.2"
-                                                className="h-4 w-4 text-emerald-600"
-                                                aria-hidden="true"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="m5 12 5 5L20 7"
-                                                />
-                                            </svg>
-                                            {item}
-                                        </li>
-                                    )
-                                )}
+                                {checklist.map((item) => (
+                                    <li key={item} className="flex items-center gap-2">
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2.2"
+                                            className="h-4 w-4 text-emerald-600"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="m5 12 5 5L20 7"
+                                            />
+                                        </svg>
+                                        {item}
+                                    </li>
+                                ))}
                             </ul>
                         </div>
 
@@ -127,9 +141,9 @@ export default function FinalCtaSection() {
                             className="hidden flex-col gap-3 lg:flex"
                             aria-hidden="true"
                         >
-                            {reports.map((r) => (
+                            {defaultReports.map((r) => (
                                 <div
-                                    key={r.title}
+                                    key={r.place}
                                     className={`flex items-center gap-3 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_14px_36px_-18px_rgba(15,23,42,0.3)] backdrop-blur ${r.offset}`}
                                 >
                                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
@@ -150,7 +164,7 @@ export default function FinalCtaSection() {
                                     </span>
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-semibold text-slate-800">
-                                            {r.title}
+                                            {t(r.titleKey, r.defaultTitle)}
                                         </p>
                                         <p className="truncate text-xs text-slate-500">
                                             {r.place}
@@ -160,7 +174,7 @@ export default function FinalCtaSection() {
                                         className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${r.chip}`}
                                     >
                                         <span className={`h-1.5 w-1.5 rounded-full ${r.dot}`} />
-                                        {r.status}
+                                        {t(r.statusKey, r.defaultStatus)}
                                     </span>
                                 </div>
                             ))}

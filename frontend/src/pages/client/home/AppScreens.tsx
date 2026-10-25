@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 /**
  * Mockup layar aplikasi PantauJalan, digambar dengan kode (tanpa file gambar).
  * Semua data di dalamnya hanya contoh tampilan.
@@ -275,6 +277,7 @@ export function MapScreen() {
 /* ------------------------------------------------------------------ */
 
 export function NavScreen() {
+    const { t } = useTranslation();
     return (
         <div className="relative h-full text-[11px]" style={{ color: INK }}>
             <MiniMap route pins={[{ x: 90, y: 280 }]} />
@@ -286,7 +289,9 @@ export function NavScreen() {
                 </svg>
                 <span>
                     <span className="block text-[17px] font-semibold leading-5">200 m</span>
-                    <span className="block text-[10px] text-white/70">Belok kanan ke jalan berikutnya</span>
+                    <span className="block text-[10px] text-white/70">
+                        {t("navigation.routeSummary", "Belok kanan ke jalan berikutnya")}
+                    </span>
                 </span>
             </div>
 
@@ -301,18 +306,18 @@ export function NavScreen() {
                     </span>
                     <span>
                         <span className="block text-[12px] font-semibold">
-                            Jalan rusak <span style={{ color: "#e5483a" }}>(Berat)</span>
+                            {t("type.jalan", "Jalan rusak")} <span style={{ color: "#e5483a" }}>({t("severity.berat", "Berat")})</span>
                         </span>
-                        <span className="block text-[10px]" style={{ color: MUTED }}>250 m di depan</span>
+                        <span className="block text-[10px]" style={{ color: MUTED }}>250 m</span>
                     </span>
                 </div>
                 <div className="mt-3 flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "#dcf6e8" }}>
                     <span>
-                        <span className="block font-semibold" style={{ color: GREEN }}>Rute alternatif</span>
-                        <span className="block text-[10px]" style={{ color: MUTED }}>12 km · 25 menit</span>
+                        <span className="block font-semibold" style={{ color: GREEN }}>{t("navigation.safeRoute", "Rute alternatif")}</span>
+                        <span className="block text-[10px]" style={{ color: MUTED }}>12 km · 25 min</span>
                     </span>
                     <span className="rounded-full px-3 py-1.5 text-[10px] font-medium text-white" style={{ background: INK }}>
-                        Pakai
+                        {t("common.confirm", "Pakai")}
                     </span>
                 </div>
             </div>

@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, LoaderCircle, ShieldCheck } from "lucide-react";
+import LanguageSwitcher from "../../../components/LanguageSwitcher";
 import { loginAdmin } from "../api/auth.api";
 import { saveAdminSession, getAdminToken } from "../utils/auth-storage";
 import { getApiErrorMessage } from "../../../utils/api-error";
 
 export default function AdminLoginPage() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const [email, setEmail] = useState("");
@@ -86,20 +89,25 @@ export default function AdminLoginPage() {
 
                 <section className="flex items-center justify-center px-6 py-10 sm:px-12 lg:px-14">
                     <div className="w-full max-w-md">
-                        <div className="mb-8 lg:hidden">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-700 text-white">
-                                <ShieldCheck size={26} />
+                        <div className="mb-6 flex items-center justify-between">
+                            <div className="lg:hidden flex items-center gap-2">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white">
+                                    <ShieldCheck size={22} />
+                                </div>
+                                <span className="text-base font-bold text-slate-900">
+                                    PantauJalan
+                                </span>
                             </div>
-                            <p className="mt-3 text-lg font-bold text-slate-900">
-                                PantauJalan
-                            </p>
+                            <div className="ml-auto">
+                                <LanguageSwitcher variant="admin" />
+                            </div>
                         </div>
 
                         <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                            Selamat datang
+                            {t("admin.loginTitle", "Selamat datang")}
                         </h2>
                         <p className="mt-3 text-sm leading-6 text-slate-500">
-                            Masuk menggunakan akun administrator untuk melanjutkan.
+                            {t("admin.loginSubtitle", "Masuk menggunakan akun administrator untuk melanjutkan.")}
                         </p>
 
                         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -108,7 +116,7 @@ export default function AdminLoginPage() {
                                     htmlFor="email"
                                     className="mb-2 block text-sm font-medium text-slate-700"
                                 >
-                                    Email
+                                    {t("admin.emailLabel", "Email")}
                                 </label>
                                 <input
                                     id="email"
@@ -117,7 +125,7 @@ export default function AdminLoginPage() {
                                     required
                                     value={email}
                                     onChange={(event) => setEmail(event.target.value)}
-                                    placeholder="Masukkan email admin"
+                                    placeholder={t("admin.emailPlaceholder", "Masukkan email admin")}
                                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/10"
                                 />
                             </div>
@@ -127,7 +135,7 @@ export default function AdminLoginPage() {
                                     htmlFor="password"
                                     className="mb-2 block text-sm font-medium text-slate-700"
                                 >
-                                    Password
+                                    {t("admin.passwordLabel", "Password")}
                                 </label>
                                 <div className="relative">
                                     <input
@@ -137,7 +145,7 @@ export default function AdminLoginPage() {
                                         required
                                         value={password}
                                         onChange={(event) => setPassword(event.target.value)}
-                                        placeholder="Masukkan password"
+                                        placeholder={t("admin.passwordPlaceholder", "Masukkan password")}
                                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/10"
                                     />
                                     <button
@@ -168,10 +176,10 @@ export default function AdminLoginPage() {
                                 {isLoading ? (
                                     <>
                                         <LoaderCircle size={18} className="animate-spin" />
-                                        Memproses login...
+                                        {t("admin.loggingInBtn", "Memproses login...")}
                                     </>
                                 ) : (
-                                    "Masuk ke Dashboard"
+                                    t("admin.loginBtn", "Masuk ke Dashboard")
                                 )}
                             </button>
                         </form>

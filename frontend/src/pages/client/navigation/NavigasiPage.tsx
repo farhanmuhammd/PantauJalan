@@ -1,5 +1,6 @@
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ArrowRight,
     CarFront,
@@ -88,6 +89,7 @@ const vehicles: {
     ];
 
 export default function NavigasiPage() {
+    const { t } = useTranslation();
     const [form, setForm] = useState<NavigationForm>(initialForm);
     const [routeData, setRouteData] = useState<SafeRouteData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -362,16 +364,15 @@ export default function NavigasiPage() {
                 <div className="mb-5">
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600">
                         <ShieldCheck size={15} />
-                        Navigasi berbasis laporan kerusakan
+                        {t("navigation.title", "Navigasi berbasis laporan kerusakan")}
                     </div>
 
                     <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                        Navigasi Pintar
+                        {t("navigation.title", "Navigasi Pintar")}
                     </h1>
 
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-                        Temukan rute perjalanan dan lihat informasi jalan rusak agar
-                        perjalananmu lebih aman.
+                        {t("navigation.subtitle", "Temukan rute perjalanan dan lihat informasi jalan rusak agar perjalananmu lebih aman.")}
                     </p>
                 </div>
 
@@ -382,15 +383,15 @@ export default function NavigasiPage() {
                             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
                         >
                             <div className="mb-5 flex items-center justify-between">
-                                <h2 className="text-base font-bold">Rencanakan perjalanan</h2>
+                                <h2 className="text-base font-bold">{t("navigation.title", "Rencanakan perjalanan")}</h2>
                                 <RouteIcon size={19} className="text-emerald-600" />
                             </div>
 
                             <div className="relative space-y-4">
 
                                 <LocationSearch
-                                    label="Lokasi awal"
-                                    placeholder="Cari alamat atau nama tempat"
+                                    label={t("navigation.originLabel", "Lokasi awal")}
+                                    placeholder={t("navigation.originPlaceholder", "Cari alamat atau nama tempat")}
                                     value={form.origin}
                                     onSelect={(location) => updateForm("origin", location)}
                                     onUseCurrentLocation={handleUseCurrentLocation}
@@ -399,8 +400,8 @@ export default function NavigasiPage() {
                                 />
 
                                 <LocationSearch
-                                    label="Lokasi tujuan"
-                                    placeholder="Cari jalan atau tempat tujuan"
+                                    label={t("navigation.destinationLabel", "Lokasi tujuan")}
+                                    placeholder={t("navigation.destinationPlaceholder", "Cari jalan atau tempat tujuan")}
                                     value={form.destination}
                                     onSelect={(location) => updateForm("destination", location)}
                                     onPickFromMap={() => handleOpenMapPicker("destination")}
@@ -416,7 +417,7 @@ export default function NavigasiPage() {
 
                             <div className="mt-6">
                                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    Jenis kendaraan
+                                    {t("navigation.vehicleLabel", "Jenis kendaraan")}
                                 </p>
 
                                 <div className="grid grid-cols-3 gap-2">
@@ -436,7 +437,7 @@ export default function NavigasiPage() {
                                                     }`}
                                             >
                                                 <Icon size={20} />
-                                                {vehicle.label}
+                                                {t(`vehicle.${vehicle.value}`, vehicle.label)}
                                             </button>
                                         );
                                     })}
@@ -457,12 +458,12 @@ export default function NavigasiPage() {
                                 {isLoading ? (
                                     <>
                                         <LoaderCircle className="animate-spin" size={17} />
-                                        Mencari rute...
+                                        {t("navigation.calculatingBtn", "Mencari rute...")}
                                     </>
                                 ) : (
                                     <>
                                         <RouteIcon size={17} />
-                                        Cari Rute Aman
+                                        {t("navigation.findRouteBtn", "Cari Rute Aman")}
                                         <ArrowRight size={16} />
                                     </>
                                 )}

@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ArrowLeft,
     CalendarDays,
@@ -85,6 +86,7 @@ function isReportStatus(status: string): status is ReportStatus {
 }
 
 function ReportStatusBadge({ status }: { status: string }) {
+    const { t } = useTranslation();
     const normalizedStatus = status.toLowerCase();
 
     const className = isReportStatus(normalizedStatus)
@@ -95,12 +97,13 @@ function ReportStatusBadge({ status }: { status: string }) {
         <span
             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${className}`}
         >
-            {formatStatus(status)}
+            {t(`status.${normalizedStatus}`, formatStatus(status))}
         </span>
     );
 }
 
 export default function ReportDetailPage() {
+    const { t } = useTranslation();
     const { reportId } = useParams<{ reportId: string }>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -177,16 +180,16 @@ export default function ReportDetailPage() {
                     className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-emerald-700"
                 >
                     <ArrowLeft size={18} />
-                    Kembali ke daftar pengaduan
+                    {t("reports.detail.backToList", "Kembali ke daftar pengaduan")}
                 </button>
 
                 <section className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#10b981] px-6 py-7 text-white sm:px-8">
                     <p className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-emerald-100">
-                        Detail Pengaduan
+                        {t("reports.detail.title", "Detail Pengaduan")}
                     </p>
 
                     <h1 className="max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl">
-                        {report?.title ?? "Informasi Pengaduan"}
+                        {report?.title ?? t("reports.detail.title", "Informasi Pengaduan")}
                     </h1>
 
                     <p className="mt-3 break-all text-xs text-emerald-100 sm:text-sm">

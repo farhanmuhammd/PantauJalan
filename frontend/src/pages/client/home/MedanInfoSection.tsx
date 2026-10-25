@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Reveal from "./Reveal";
 import { CAMAT_SOURCE_URL, camatMedan } from "./medanCamat";
 
-const facts = [
-    { value: "21", label: "Kecamatan" },
-    { value: "151", label: "Kelurahan" },
-    { value: "112", label: "Layanan darurat, bebas pulsa" },
-];
-
 export default function MedanInfoSection() {
+    const { t } = useTranslation();
     const [query, setQuery] = useState("");
+
+    const facts = [
+        { value: "21", label: t("home.medanInfo.facts.0.label", "Kecamatan") },
+        { value: "151", label: t("home.medanInfo.facts.1.label", "Kelurahan") },
+        { value: "112", label: t("home.medanInfo.facts.2.label", "Layanan darurat, bebas pulsa") },
+    ];
 
     const list = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -30,18 +32,17 @@ export default function MedanInfoSection() {
                 <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
                     <Reveal>
                         <h2 className="text-3xl font-semibold leading-[1.1] tracking-[-0.03em] sm:text-5xl">
-                            Kenali wilayahmu di Medan.
+                            {t("home.medanInfo.title", "Kenali wilayahmu di Medan.")}
                         </h2>
                         <p className="mt-5 max-w-sm text-base leading-7 text-[#4b5d55]">
-                            Tahu siapa camat di kecamatanmu memudahkan
-                            tindak lanjut laporan di tingkat wilayah.
+                            {t("home.medanInfo.subtitle", "Tahu siapa camat di kecamatanmu memudahkan tindak lanjut laporan di tingkat wilayah.")}
                         </p>
                     </Reveal>
 
                     <Reveal delay={0.08}>
                         <dl className="grid grid-cols-3 gap-4 sm:gap-8">
                             {facts.map((f) => (
-                                <div key={f.label} className="border-t border-[#0b1d16] pt-4">
+                                <div key={f.value} className="border-t border-[#0b1d16] pt-4">
                                     <dd className="text-3xl font-semibold tracking-[-0.03em] sm:text-5xl">
                                         {f.value}
                                     </dd>
@@ -57,7 +58,7 @@ export default function MedanInfoSection() {
                 <div className="mt-16">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <h3 className="text-xl font-semibold tracking-tight">
-                            Camat 21 kecamatan
+                            {t("home.medanInfo.sectionTitle", "Camat 21 kecamatan")}
                         </h3>
 
                         <label className="relative block w-full sm:w-72">
@@ -66,7 +67,7 @@ export default function MedanInfoSection() {
                                 type="search"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Cari kecamatan atau nama"
+                                placeholder={t("home.medanInfo.searchPlaceholder", "Cari kecamatan atau nama")}
                                 className="w-full rounded-full border border-[#dfeae3] bg-[#f7fbf8] px-5 py-2.5 text-sm outline-none transition-colors placeholder:text-[#8a9b93] focus:border-[#0b7a52]"
                             />
                         </label>
@@ -74,7 +75,7 @@ export default function MedanInfoSection() {
 
                     {list.length === 0 ? (
                         <p className="mt-8 text-sm text-[#4b5d55]">
-                            Tidak ada hasil untuk "{query}".
+                            {t("home.medanInfo.noResult", { query, defaultValue: `Tidak ada hasil untuk "${query}".` })}
                         </p>
                     ) : (
                         <ul className="mt-6 grid border-t border-[#dfeae3] sm:grid-cols-2 sm:gap-x-12 lg:grid-cols-3">
@@ -92,7 +93,7 @@ export default function MedanInfoSection() {
                                         </p>
                                     ) : (
                                         <p className="mt-1 text-sm italic text-[#8a9b93]">
-                                            Data menyusul
+                                            {t("home.medanInfo.pending", "Data menyusul")}
                                         </p>
                                     )}
                                 </li>

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const navLinks = [
-    { label: "Beranda", href: "/", type: "route" },
-    { label: "Pengaduan", href: "/pengaduan", type: "route" },
-    { label: "Navigasi", href: "/navigasi", type: "route" },
-    { label: "FAQ", href: "#faq", type: "anchor" },
+    { labelKey: "nav.home", defaultLabel: "Beranda", href: "/", type: "route" },
+    { labelKey: "nav.reports", defaultLabel: "Pengaduan", href: "/pengaduan", type: "route" },
+    { labelKey: "nav.navigation", defaultLabel: "Navigasi", href: "/navigasi", type: "route" },
+    { labelKey: "nav.faq", defaultLabel: "FAQ", href: "#faq", type: "anchor" },
 ] as const;
 
 function LocationPin() {
@@ -42,6 +44,7 @@ function MenuIcon({ open }: { open: boolean }) {
 }
 
 export default function Navbar() {
+    const { t } = useTranslation();
     const { pathname, hash } = useLocation();
     const [open, setOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -109,42 +112,48 @@ export default function Navbar() {
                     </Link>
 
                     {/* Desktop */}
-                    <div className="hidden items-center gap-8 md:flex lg:gap-10">
+                    <div className="hidden items-center gap-6 md:flex lg:gap-8">
                         {navLinks.map((link) => {
                             const active = isActive(link.href, link.type);
+                            const label = t(link.labelKey, link.defaultLabel);
                             return link.type === "route" ? (
                                 <Link
-                                    key={link.label}
+                                    key={link.href}
                                     to={link.href}
                                     aria-current={active ? "page" : undefined}
                                     className={desktopLink(active)}
                                 >
-                                    {link.label}
+                                    {label}
                                 </Link>
                             ) : (
                                 <a
-                                    key={link.label}
+                                    key={link.href}
                                     href={link.href}
                                     aria-current={active ? "location" : undefined}
                                     className={desktopLink(active)}
                                 >
-                                    {link.label}
+                                    {label}
                                 </a>
                             );
                         })}
+
+                        <LanguageSwitcher />
                     </div>
 
                     {/* Tombol menu mobile */}
-                    <button
-                        type="button"
-                        onClick={() => setOpen((v) => !v)}
-                        aria-expanded={open}
-                        aria-controls="mobile-menu"
-                        aria-label={open ? "Tutup menu" : "Buka menu"}
-                        className="-mr-2 inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 md:hidden"
-                    >
-                        <MenuIcon open={open} />
-                    </button>
+                    <div className="flex items-center gap-2 md:hidden">
+                        <LanguageSwitcher variant="subtle" />
+                        <button
+                            type="button"
+                            onClick={() => setOpen((v) => !v)}
+                            aria-expanded={open}
+                            aria-controls="mobile-menu"
+                            aria-label={open ? t("common.close", "Tutup menu") : "Buka menu"}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                        >
+                            <MenuIcon open={open} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Menu mobile: animasi tinggi dengan grid rows */}
@@ -160,15 +169,16 @@ export default function Navbar() {
                         >
                             {navLinks.map((link) => {
                                 const active = isActive(link.href, link.type);
+                                const label = t(link.labelKey, link.defaultLabel);
                                 return (
-                                    <li key={link.label}>
+                                    <li key={link.href}>
                                         {link.type === "route" ? (
                                             <Link
                                                 to={link.href}
                                                 aria-current={active ? "page" : undefined}
                                                 className={mobileLink(active)}
                                             >
-                                                {link.label}
+                                                {label}
                                             </Link>
                                         ) : (
                                             <a
@@ -177,7 +187,7 @@ export default function Navbar() {
                                                 aria-current={active ? "location" : undefined}
                                                 className={mobileLink(active)}
                                             >
-                                                {link.label}
+                                                {label}
                                             </a>
                                         )}
                                     </li>

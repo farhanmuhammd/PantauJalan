@@ -1,5 +1,6 @@
 
 import { AlertTriangle, CircleAlert, ShieldCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ReportSeverity } from "../types/reports.types";
 
 interface SeveritySelectorProps {
@@ -38,10 +39,12 @@ export default function SeveritySelector({
     value,
     onChange,
 }: SeveritySelectorProps) {
+    const { t } = useTranslation();
+
     return (
         <fieldset>
             <legend className="mb-3 text-sm font-semibold text-slate-800">
-                Tingkat keparahan <span className="text-red-500">*</span>
+                {t("reports.form.severityLabel", "Tingkat keparahan")} <span className="text-red-500">*</span>
             </legend>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -61,7 +64,7 @@ export default function SeveritySelector({
                             <span className="flex items-center gap-2">
                                 <Icon size={18} />
                                 <span className="text-sm font-semibold">
-                                    {option.label}
+                                    {t(`severity.${option.value}`, option.label)}
                                 </span>
                             </span>
 

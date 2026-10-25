@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import {
     AnimatePresence,
     motion,
@@ -6,7 +8,7 @@ import {
     type Variants,
 } from "framer-motion";
 
-const words = [
+const defaultWords = [
     "Jalan berlubang",
     "Lampu padam",
     "Drainase mampet",
@@ -32,6 +34,9 @@ const wordVariants: Variants = {
 };
 
 function RotatingWord() {
+    const { t } = useTranslation();
+    const wordsObj = t("home.hero.words", { returnObjects: true });
+    const words = Array.isArray(wordsObj) && wordsObj.length > 0 ? (wordsObj as string[]) : defaultWords;
     const [activeIndex, setActiveIndex] = useState(0);
     const shouldReduceMotion = useReducedMotion();
 
@@ -41,10 +46,12 @@ function RotatingWord() {
             setActiveIndex((current) => (current + 1) % words.length);
         }, 2400);
         return () => window.clearInterval(interval);
-    }, [shouldReduceMotion]);
+    }, [shouldReduceMotion, words.length]);
+
+    const activeWord = words[activeIndex % words.length];
 
     if (shouldReduceMotion) {
-        return <span className="text-emerald-600">{words[activeIndex]}</span>;
+        return <span className="text-emerald-600">{activeWord}</span>;
     }
 
     return (
@@ -59,14 +66,14 @@ function RotatingWord() {
 
             <AnimatePresence mode="wait">
                 <motion.span
-                    key={words[activeIndex]}
+                    key={activeWord}
                     variants={wordVariants}
                     initial="initial"
                     animate="animate"
                     exit="exit"
                     className="col-start-1 row-start-1 whitespace-nowrap text-emerald-600"
                 >
-                    {words[activeIndex]}
+                    {activeWord}
                 </motion.span>
             </AnimatePresence>
         </span>
@@ -147,6 +154,7 @@ const iconProps = {
 };
 
 function PhoneMockup() {
+    const { t } = useTranslation();
     return (
         <div className="relative mx-auto aspect-[9/18.4] w-[250px] rounded-[2.4rem] border-[7px] border-slate-900 bg-slate-900 shadow-[0_40px_80px_-30px_rgba(15,23,42,0.55)] sm:w-[280px]">
             <div className="relative h-full w-full overflow-hidden rounded-[1.9rem] bg-[#eaf6ee]">
@@ -225,35 +233,38 @@ function PhoneMockup() {
                         </div>
                         <div className="min-w-0">
                             <p className="truncate text-[13px] font-semibold text-slate-800">
-                                Jalan berlubang
+                                {t("type.jalan", "Jalan berlubang")}
                             </p>
                             <p className="truncate text-[11px] text-slate-500">
                                 Jl. Gatot Subroto, Medan
                             </p>
                             <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                                Menunggu verifikasi
+                                {t("home.hero.mockup.waitingVerification", "Menunggu verifikasi")}
                             </span>
                         </div>
                     </div>
 
                     {/* Tahapan: ini memang urutan nyata */}
                     <div className="mt-3 flex items-center">
-                        {["Dilaporkan", "Diverifikasi", "Dikerjakan", "Selesai"].map(
-                            (step, i) => (
-                                <div key={step} className="flex flex-1 items-center last:flex-none">
-                                    <span
-                                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${i === 0 ? "bg-emerald-600" : "bg-slate-200"
-                                            }`}
-                                        title={step}
-                                    />
-                                    {i < 3 && <span className="mx-1 h-0.5 flex-1 rounded bg-slate-200" />}
-                                </div>
-                            )
-                        )}
+                        {[
+                            t("home.hero.mockup.reported", "Dilaporkan"),
+                            t("home.hero.mockup.verified", "Diverifikasi"),
+                            t("home.hero.mockup.working", "Dikerjakan"),
+                            t("home.hero.mockup.resolved", "Selesai")
+                        ].map((step, i) => (
+                            <div key={step} className="flex flex-1 items-center last:flex-none">
+                                <span
+                                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${i === 0 ? "bg-emerald-600" : "bg-slate-200"
+                                        }`}
+                                    title={step}
+                                />
+                                {i < 3 && <span className="mx-1 h-0.5 flex-1 rounded bg-slate-200" />}
+                            </div>
+                        ))}
                     </div>
                     <div className="mt-1 flex justify-between text-[9px] text-slate-400">
-                        <span>Dilaporkan</span>
-                        <span>Selesai</span>
+                        <span>{t("home.hero.mockup.reported", "Dilaporkan")}</span>
+                        <span>{t("home.hero.mockup.resolved", "Selesai")}</span>
                     </div>
                 </div>
             </div>
@@ -262,6 +273,7 @@ function PhoneMockup() {
 }
 
 function HeroVisual() {
+    const { t } = useTranslation();
     return (
         <div className="relative mx-auto w-full max-w-[560px] py-6 lg:max-w-none">
             {/* Aksen latar */}
@@ -287,8 +299,8 @@ function HeroVisual() {
                             </svg>
                         </div>
                         <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-800">Laporan baru</p>
-                            <p className="truncate text-xs text-slate-500">Lubang di Jl. Gatot Subroto</p>
+                            <p className="text-sm font-semibold text-slate-800">{t("home.hero.mockup.newReport", "Laporan baru")}</p>
+                            <p className="truncate text-xs text-slate-500">{t("home.hero.mockup.sampleRoad", "Lubang di Jl. Gatot Subroto")}</p>
                         </div>
                     </div>
                 </FloatCard>
@@ -299,13 +311,13 @@ function HeroVisual() {
                     delay={1.2}
                 >
                     <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-slate-800">Sedang dikerjakan</p>
+                        <p className="text-sm font-semibold text-slate-800">{t("home.hero.mockup.inProgress", "Sedang dikerjakan")}</p>
                         <span className="text-xs font-medium text-emerald-700">60%</span>
                     </div>
                     <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                         <div className="h-full w-3/5 rounded-full bg-emerald-500" />
                     </div>
-                    <p className="mt-2 text-xs text-slate-500">Petugas sudah di lokasi.</p>
+                    <p className="mt-2 text-xs text-slate-500">{t("home.hero.mockup.officerOnSite", "Petugas sudah di lokasi.")}</p>
                 </FloatCard>
 
                 {/* Foto bukti */}
@@ -321,7 +333,7 @@ function HeroVisual() {
                             </svg>
                         </div>
                         <p className="text-xs font-medium leading-4 text-slate-700">
-                            Foto & lokasi terlampir
+                            {t("home.hero.mockup.photoAttached", "Foto & lokasi terlampir")}
                         </p>
                     </div>
                 </FloatCard>
@@ -331,6 +343,8 @@ function HeroVisual() {
 }
 
 export default function HeroSection() {
+    const { t } = useTranslation();
+
     return (
         <section
             id="beranda"
@@ -347,30 +361,30 @@ export default function HeroSection() {
             />
 
             <div className="mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-8 px-5 py-14 sm:px-8 md:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:gap-8 lg:px-10">
-                {/* Left content (TIDAK DIUBAH) */}
+                {/* Left content */}
                 <div className="relative z-10 mx-auto w-full max-w-2xl text-center lg:mx-0 lg:text-left">
                     <h1 className="text-4xl font-extrabold leading-[1.15] tracking-tight text-slate-900 sm:text-5xl md:text-6xl lg:text-[3.65rem] xl:text-7xl">
-                        Temukan dan laporkan
+                        {t("home.hero.titlePrefix", "Temukan dan laporkan")}
                         <span className="mt-2 block min-h-[1.2em] text-emerald-600">
                             <RotatingWord />
                         </span>
-                        <span className="mt-2 block">di sekitarmu.</span>
+                        <span className="mt-2 block">{t("home.hero.titleSuffix", "di sekitarmu.")}</span>
                     </h1>
 
                     <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8 lg:mx-0">
-                        Bantu wujudkan lingkungan yang lebih aman dan nyaman dengan
-                        melaporkan kerusakan jalan serta fasilitas umum. Laporanmu
-                        membantu masyarakat dan petugas mengetahui masalah yang perlu
-                        segera ditangani.
+                        {t(
+                            "home.hero.desc",
+                            "Bantu wujudkan lingkungan yang lebih aman dan nyaman dengan melaporkan kerusakan jalan serta fasilitas umum. Laporanmu membantu masyarakat dan petugas mengetahui masalah yang perlu segera ditangani."
+                        )}
                     </p>
 
                     {/* CTA */}
                     <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start">
-                        <a
-                            href="/reports/create"
+                        <Link
+                            to="/form-pengaduan"
                             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-600/20 transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                         >
-                            Laporkan Kerusakan
+                            {t("home.hero.ctaReport", "Laporkan Kerusakan")}
                             <svg
                                 aria-hidden="true"
                                 xmlns="http://www.w3.org/2000/svg"
@@ -386,14 +400,14 @@ export default function HeroSection() {
                                     d="M7 17 17 7M7 7h10v10"
                                 />
                             </svg>
-                        </a>
+                        </Link>
 
-                        <a
-                            href="/reports"
+                        <Link
+                            to="/pengaduan"
                             className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                         >
-                            Lihat Laporan
-                        </a>
+                            {t("home.hero.trustReports")}
+                        </Link>
                     </div>
 
                     {/* Supporting information */}
@@ -415,7 +429,7 @@ export default function HeroSection() {
                                 />
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-4" />
                             </svg>
-                            <span>Laporan masyarakat</span>
+                            <span>{t("home.hero.trustReports", "Laporan masyarakat")}</span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -435,7 +449,7 @@ export default function HeroSection() {
                                 />
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5" />
                             </svg>
-                            <span>Pantau tindak lanjut</span>
+                            <span>{t("home.hero.trustResolved", "Pantau tindak lanjut")}</span>
                         </div>
                     </div>
                 </div>
