@@ -13,8 +13,7 @@ const repairProgressSchema = new mongoose.Schema(
     // Bukti foto, minimal 1 untuk setiap progres.
     images: {
       type: [String],
-      default: [],
-      validate: { validator: (v) => v.length >= 1, message: "Foto bukti wajib diunggah (minimal 1)" },
+      default: []
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     createdByName: { type: String, trim: true },
