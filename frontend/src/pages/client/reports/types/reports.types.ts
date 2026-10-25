@@ -79,11 +79,17 @@ export interface ReportSummaryItem {
   name: string;
 }
 
+type ReportTypeSummary = {
+  type: string;
+  total: number;
+};
+
 export interface ReportSummaryData {
   statusSummary: {
     total: number;
     status: ReportStatus;
   }[];
+  typeSummary: ReportTypeSummary[];
   street: ReportSummaryItem[];
   village: ReportSummaryItem[];
   district: ReportSummaryItem[];

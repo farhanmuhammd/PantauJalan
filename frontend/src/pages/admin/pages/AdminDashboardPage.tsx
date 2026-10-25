@@ -16,6 +16,7 @@ import type { ReportSummaryResponse } from "../../client/reports/types/reports.t
 import ReportStatusChart from "./dashboard/components/ReportStatusChart";
 import TodayReportsTable from "./dashboard/components/TodayReportsTable";
 import RegionDistributionCard from "./dashboard/components/RegionDistributionCard";
+import ReportTypeChart from "./dashboard/components/ReportTypeChart";
 
 export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<ReportSummaryResponse | null>(null);
@@ -152,22 +153,33 @@ export default function AdminDashboardPage() {
       <TodayReportsTable load={loadTodayReports} />
 
       {loading ? (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-          <div className="h-[560px] animate-pulse rounded-2xl bg-slate-200/70" />
-          <div className="h-[560px] animate-pulse rounded-2xl bg-slate-200/70" />
+        <div className="space-y-5">
+          <div className="grid gap-5 xl:grid-cols-2">
+            <div className="h-[420px] animate-pulse rounded-2xl bg-slate-200/70" />
+            <div className="h-[420px] animate-pulse rounded-2xl bg-slate-200/70" />
+          </div>
+          <div className="h-[400px] animate-pulse rounded-2xl bg-slate-200/70" />
         </div>
       ) : (
         summary && (
-          <section className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-            <ReportStatusChart
-              summary={summary.data.statusSummary}
-              total={summary.meta.totalReports}
-            />
+          <div className="space-y-5">
+            <section className="grid items-stretch gap-5 xl:grid-cols-2">
+              <ReportStatusChart
+                summary={summary.data.statusSummary}
+                total={summary.meta.totalReports}
+              />
+
+              <ReportTypeChart
+                summary={summary.data.typeSummary ?? []}
+                total={summary.meta.totalReports}
+              />
+            </section>
+
             <RegionDistributionCard
               districts={summary.data.district ?? []}
               villages={summary.data.village ?? []}
             />
-          </section>
+          </div>
         )
       )}
     </div>
