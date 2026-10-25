@@ -142,11 +142,11 @@ export default function LocationSearch({
 
             <div
                 className={`flex items-center gap-3 rounded-xl border bg-white px-3.5 py-3 transition ${isOpen
-                    ? "border-blue-400 ring-4 ring-blue-50"
+                    ? "border-emerald-400 ring-4 ring-emerald-50"
                     : "border-slate-200 hover:border-slate-300"
                     }`}
             >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
                     <MapPin size={18} />
                 </span>
 
@@ -171,7 +171,7 @@ export default function LocationSearch({
                 />
 
                 {isSearchLoading ? (
-                    <LoaderCircle size={17} className="shrink-0 animate-spin text-blue-600" />
+                    <LoaderCircle size={17} className="shrink-0 animate-spin text-emerald-600" />
                 ) : value ? (
                     <button
                         type="button"
@@ -192,7 +192,7 @@ export default function LocationSearch({
                         type="button"
                         onClick={onUseCurrentLocation}
                         disabled={isGettingLocation}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
                     >
                         <Crosshair size={14} />
                         {isGettingLocation ? "Mencari lokasi..." : "Gunakan lokasi saat ini"}
@@ -203,7 +203,7 @@ export default function LocationSearch({
                     <button
                         type="button"
                         onClick={onPickFromMap}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-blue-700"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-emerald-700"
                     >
                         <MapPin size={14} />
                         Pilih dari peta
@@ -228,7 +228,7 @@ export default function LocationSearch({
                                         type="button"
                                         onMouseDown={(event) => event.preventDefault()}
                                         onClick={() => handleSelect(location)}
-                                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-blue-50"
+                                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-emerald-50"
                                     >
                                         <MapPin
                                             size={17}
