@@ -117,7 +117,6 @@ export const getReportById = async (req, res, next) => {
 };
 
 // GET /api/reports/summary
-
 export const getReportSummary = async (req, res, next) => {
   try {
     const { status, severity, groupBy, type } = req.query;
@@ -154,27 +153,65 @@ export const getReportSummary = async (req, res, next) => {
         },
         { $sort: { status: 1 } },
       ],
+
+      // Ringkasan jumlah laporan berdasarkan tipe
+      typeSummary: [
+        {
+          $match: {
+            type: { $ne: null, $exists: true },
+          },
+        },
+        {
+          $group: {
+            _id: "$type",
+            total: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            type: "$_id",
+            total: 1,
+          },
+        },
+        { $sort: { type: 1 } },
+      ],
     };
 
     fields.forEach((f) => {
       facets[f] = [
         { $match: { [f]: { $ne: null } } },
-        { $group: { _id: `$${f}`, total: { $sum: 1 } } },
+        {
+          $group: {
+            _id: `$${f}`,
+            total: { $sum: 1 },
+          },
+        },
         { $sort: { total: -1, _id: 1 } },
-        { $project: { _id: 0, name: "$_id", total: 1 } },
+        {
+          $project: {
+            _id: 0,
+            name: "$_id",
+            total: 1,
+          },
+        },
       ];
     });
 
     const [data, totalReports] = await Promise.all([
-      Report.aggregate([{ $match: match }, { $facet: facets }])
-        .then((r) => r[0]),
+      Report.aggregate([{ $match: match }, { $facet: facets }]).then(
+        (result) => result[0],
+      ),
       Report.countDocuments(match),
     ]);
 
     return success(res, {
       message: "Ringkasan laporan berhasil diambil",
       data,
-      meta: { groupBy: groupBy || null, totalReports },
+      meta: {
+        groupBy: groupBy || null,
+        totalReports,
+      },
     });
   } catch (err) {
     next(err);
