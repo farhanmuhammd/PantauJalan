@@ -68,6 +68,13 @@ function formatSeverity(value: ReportItem["severity"]) {
     return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function formatReportType(type: string) {
+    return type
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+}
+
 function ReportCard({ report }: { report: ReportItem }) {
     const image = report.images?.[0];
     const navigate = useNavigate();
@@ -94,12 +101,18 @@ function ReportCard({ report }: { report: ReportItem }) {
                     </div>
                 )}
 
-                <span
-                    className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${severityStyles[report.severity] ?? severityStyles.sedang
-                        }`}
-                >
-                    Kerusakan {formatSeverity(report.severity)}
-                </span>
+                <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-sm">
+                        {formatReportType(report.type)}
+                    </span>
+
+                    <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${severityStyles[report.severity] ?? severityStyles.sedang
+                            }`}
+                    >
+                        Kerusakan {formatSeverity(report.severity)}
+                    </span>
+                </div>
             </div>
 
             <div className="flex flex-1 flex-col p-4">

@@ -18,6 +18,7 @@ export const createReport = async (
 
   formData.append("title", payload.title);
   formData.append("description", payload.description);
+  formData.append("type", payload.type);
   formData.append("severity", payload.severity);
   formData.append("latitude", String(payload.latitude));
   formData.append("longitude", String(payload.longitude));

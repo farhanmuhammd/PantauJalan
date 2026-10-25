@@ -112,15 +112,15 @@ export default function ImageUploader({
                     <button
                         type="button"
                         onClick={() => inputRef.current?.click()}
-                        className="flex aspect-square flex-col items-center justify-center rounded-xl border border-dashed border-blue-300 bg-blue-50/50 p-4 text-center transition hover:border-blue-500 hover:bg-blue-50"
+                        className="flex aspect-square flex-col items-center justify-center rounded-xl border border-dashed border-emerald-300 bg-emerald-50/50 p-4 text-center transition hover:border-emerald-500 hover:bg-emerald-50"
                     >
                         {value.length === 0 ? (
-                            <UploadCloud className="mb-2 text-blue-600" size={25} />
+                            <UploadCloud className="mb-2 text-emerald-600" size={25} />
                         ) : (
-                            <ImagePlus className="mb-2 text-blue-600" size={25} />
+                            <ImagePlus className="mb-2 text-emerald-600" size={25} />
                         )}
 
-                        <span className="text-sm font-semibold text-blue-700">
+                        <span className="text-sm font-semibold text-emerald-700">
                             {value.length === 0 ? "Unggah foto" : "Tambah foto"}
                         </span>
                         <span className="mt-1 text-xs text-slate-500">

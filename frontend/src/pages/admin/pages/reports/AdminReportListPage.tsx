@@ -50,6 +50,13 @@ const dateLabel = (value: string) =>
     year: "numeric",
   }).format(new Date(value));
 
+function formatReportType(type: string) {
+  return type
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export default function AdminReportListPage() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<ReportItem[]>([]);
@@ -209,6 +216,7 @@ export default function AdminReportListPage() {
                 <th className="px-5 py-3.5">Laporan</th>
                 <th className="px-4 py-3.5">Lokasi</th>
                 <th className="px-4 py-3.5">Kerusakan</th>
+                <th className="px-4 py-3.5">Tipe</th>
                 <th className="px-4 py-3.5">Status</th>
                 <th className="px-4 py-3.5">Tanggal</th>
                 <th className="px-5 py-3.5 text-right">Aksi</th>
@@ -273,6 +281,14 @@ export default function AdminReportListPage() {
                         className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${severityStyles[report.severity] || severityStyles.sedang}`}
                       >
                         {report.severity}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${severityStyles[report.severity] ?? severityStyles.sedang
+                          }`}
+                      >
+                        {formatReportType(report.type)}
                       </span>
                     </td>
                     <td className="px-4 py-4">

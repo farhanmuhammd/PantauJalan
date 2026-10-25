@@ -12,6 +12,7 @@ export type AdminProgress = {
   title: string;
   description: string;
   status: string;
+  type: string;
   images: string[];
   createdBy?: string;
   createdByName?: string;
@@ -72,6 +73,7 @@ export type UpdateReportPayload = {
   severity: ReportItem["severity"];
   status: ReportStatus;
   latitude: number;
+  type: string;
   longitude: number;
   images?: File[];
 };
@@ -84,6 +86,7 @@ export async function updateAdminReport(
   formData.append("title", payload.title);
   formData.append("description", payload.description);
   formData.append("severity", payload.severity);
+  formData.append("type", payload.type);
   formData.append("status", payload.status);
   formData.append("latitude", String(payload.latitude));
   formData.append("longitude", String(payload.longitude));

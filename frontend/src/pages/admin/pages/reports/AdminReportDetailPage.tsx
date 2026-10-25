@@ -55,6 +55,16 @@ const statusClass: Record<string, string> = {
   selesai: "bg-emerald-50 text-emerald-700",
   ditolak: "bg-rose-50 text-rose-700",
 };
+
+const reportTypes = [
+  { value: "jalan", label: "Jalan" },
+  { value: "lampu-jalan", label: "Lampu Jalan" },
+  { value: "trotoar", label: "Trotoar" },
+  { value: "halte", label: "Halte" },
+  { value: "taman", label: "Taman" },
+  { value: "lainnya", label: "Lainnya" },
+] as const;
+
 const dateLabel = (value: string) =>
   new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
@@ -95,6 +105,7 @@ export default function AdminReportDetailPage() {
     description: initialReport?.description ?? "",
     severity: (initialReport?.severity ?? "sedang") as ReportSeverity,
     status: (initialReport?.status ?? "menunggu") as ReportStatus,
+    type: initialReport?.type ?? "lainnya",
     latitude: initialReport?.location.coordinates[1] ?? 0,
     longitude: initialReport?.location.coordinates[0] ?? 0,
     images: [] as File[],
@@ -130,6 +141,7 @@ export default function AdminReportDetailPage() {
       title: report.title,
       description: report.description,
       severity: report.severity,
+      type: report.type ?? "lainnya",
       status: report.status,
       latitude: report.location.coordinates[1],
       longitude: report.location.coordinates[0],
@@ -312,11 +324,6 @@ export default function AdminReportDetailPage() {
     lng: number,
     displayName: string,
   ) => {
-    console.log("Lokasi baru dipilih:", {
-      latitude: lat,
-      longitude: lng,
-      displayName,
-    });
 
     setReportForm((current) => ({
       ...current,
@@ -524,6 +531,37 @@ export default function AdminReportDetailPage() {
                       className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                     />
                   </div>
+                  <div>
+                    <label
+                      htmlFor="report-type"
+                      className="mb-1.5 block text-xs font-semibold text-slate-600"
+                    >
+                      Tipe laporan
+                    </label>
+
+                    <select
+                      id="report-type"
+                      value={reportForm.type}
+                      onChange={(event) =>
+                        setReportForm((current) => ({
+                          ...current,
+                          type: event.target.value,
+                        }))
+                      }
+                      required
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                    >
+                      {reportTypes.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      Pilih kategori yang paling sesuai dengan laporan kerusakan.
+                    </p>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600">
@@ -676,12 +714,22 @@ export default function AdminReportDetailPage() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-slate-100 p-3">
+                      <p className="text-xs text-slate-400">Tipe laporan</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-800">
+                        {reportTypes.find((item) => item.value === report.type)?.label ??
+                          report.type ??
+                          "-"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-100 p-3">
                       <p className="text-xs text-slate-400">Tingkat kerusakan</p>
                       <p className="mt-1 text-sm font-semibold capitalize text-slate-800">
                         {report.severity}
                       </p>
                     </div>
-                    <div className="rounded-xl border border-slate-100 p-3">
+
+                    <div className="rounded-xl border border-slate-100 p-3 sm:col-span-2">
                       <p className="text-xs text-slate-400">Status saat ini</p>
                       <p className="mt-1 text-sm font-semibold capitalize text-slate-800">
                         {report.status}

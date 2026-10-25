@@ -67,6 +67,13 @@ function formatStatus(status: string) {
     return labels[status.toLowerCase()] ?? status;
 }
 
+function formatReportType(type: string) {
+    return type
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+}
+
 function isReportStatus(status: string): status is ReportStatus {
     return [
         "menunggu",
@@ -276,6 +283,25 @@ export default function ReportDetailPage() {
                                             </p>
                                             <p className="mt-1 text-sm text-slate-700">
                                                 {formatDate(report.createdAt)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-slate-100 pt-4">
+                                    <div className="flex items-start gap-3">
+                                        <FileText
+                                            size={18}
+                                            className="mt-0.5 shrink-0 text-emerald-600"
+                                        />
+
+                                        <div>
+                                            <p className="text-xs text-slate-400">
+                                                Tipe pelaporan
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-slate-700">
+                                                {report.type ? formatReportType(report.type) : "-"}
                                             </p>
                                         </div>
                                     </div>

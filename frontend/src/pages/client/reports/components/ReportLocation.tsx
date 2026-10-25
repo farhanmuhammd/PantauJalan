@@ -265,7 +265,7 @@ export default function ReportLocation({
     return (
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-7">
             <div className="mb-5 flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                     <MapPin size={20} />
                 </span>
 
@@ -288,11 +288,11 @@ export default function ReportLocation({
                     Cari nama jalan atau tempat
                 </label>
 
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-3 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-3 focus-within:border-emerald-400 focus-within:ring-4 focus-within:ring-emerald-50">
                     {isSearching ? (
                         <LoaderCircle
                             size={18}
-                            className="shrink-0 animate-spin text-blue-600"
+                            className="shrink-0 animate-spin text-emerald-600"
                         />
                     ) : (
                         <Search
@@ -369,11 +369,11 @@ export default function ReportLocation({
                                         event.preventDefault()
                                     }
                                     onClick={() => handleSelectPlace(place)}
-                                    className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-blue-50"
+                                    className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-emerald-50"
                                 >
                                     <MapPin
                                         size={17}
-                                        className="mt-0.5 shrink-0 text-blue-600"
+                                        className="mt-0.5 shrink-0 text-emerald-600"
                                     />
                                     <span className="min-w-0">
                                         <span className="block text-sm font-semibold text-slate-800">
@@ -404,7 +404,7 @@ export default function ReportLocation({
                             "Klik titik lokasi kerusakan langsung pada peta.",
                         )
                     }
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                 >
                     <MousePointer2 size={17} />
                     Pilih titik di peta
@@ -414,7 +414,7 @@ export default function ReportLocation({
                     type="button"
                     onClick={getMyLocation}
                     disabled={locating}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
                 >
                     {locating ? (
                         <LoaderCircle
@@ -452,9 +452,9 @@ export default function ReportLocation({
                                 center={position}
                                 radius={17}
                                 pathOptions={{
-                                    color: "#2563eb",
+                                    color: "#059669",
                                     weight: 2,
-                                    fillColor: "#60a5fa",
+                                    fillColor: "#059669",
                                     fillOpacity: 0.2,
                                 }}
                             />
@@ -462,9 +462,9 @@ export default function ReportLocation({
                                 center={position}
                                 radius={7}
                                 pathOptions={{
-                                    color: "#ffffff",
+                                    color: "#059669",
                                     weight: 3,
-                                    fillColor: "#2563eb",
+                                    fillColor: "#059669",
                                     fillOpacity: 1,
                                 }}
                             />
@@ -480,7 +480,7 @@ export default function ReportLocation({
             </p>
 
             {selectedPlace && (
-                <div className="mt-3 rounded-lg bg-blue-50 px-3 py-2.5 text-sm text-blue-800">
+                <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
                     <span className="font-semibold">Lokasi dipilih: </span>
                     {selectedPlace}
                 </div>
@@ -496,7 +496,7 @@ export default function ReportLocation({
                         type="button"
                         onClick={copyCoordinates}
                         disabled={latitude === null || longitude === null}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-800 disabled:opacity-40"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-40"
                     >
                         <Copy size={14} />
                         Salin
@@ -533,7 +533,7 @@ export default function ReportLocation({
                                     );
                                 }
                             }}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                         />
                     </div>
 
@@ -566,7 +566,7 @@ export default function ReportLocation({
                                     );
                                 }
                             }}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                         />
                     </div>
                 </div>
@@ -587,7 +587,7 @@ export default function ReportLocation({
                 )}
             </div>
 
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-blue-50 p-3.5 text-xs leading-relaxed text-blue-800">
+            <div className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-50 p-3.5 text-xs leading-relaxed text-emerald-800">
                 <MapPin size={16} className="mt-0.5 shrink-0" />
                 <p>
                     Koordinat digunakan untuk membantu petugas menemukan lokasi

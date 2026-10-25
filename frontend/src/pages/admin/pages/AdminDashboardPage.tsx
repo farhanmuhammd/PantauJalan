@@ -15,7 +15,7 @@ import {
 import type { ReportSummaryResponse } from "../../client/reports/types/reports.types";
 import ReportStatusChart from "./dashboard/components/ReportStatusChart";
 import TodayReportsTable from "./dashboard/components/TodayReportsTable";
-import RegionDistributionCard from "./dashboard/components/Regiondistributioncard";
+import RegionDistributionCard from "./dashboard/components/RegionDistributionCard";
 
 export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<ReportSummaryResponse | null>(null);

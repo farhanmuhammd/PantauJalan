@@ -14,6 +14,16 @@ interface ReportDetailsFormProps {
     errors: Partial<Record<keyof CreateReportPayload, string>>;
 }
 
+const reportTypes = [
+    { value: "jalan", label: "Jalan" },
+    { value: "lampu-jalan", label: "Lampu jalan" },
+    { value: "trotoar", label: "Trotoar" },
+    { value: "halte", label: "Halte" },
+    { value: "taman", label: "Taman" },
+    { value: "lainnya", label: "Lainnya" },
+] as const;
+
+
 export default function ReportDetailsForm({
     form,
     onChange,
@@ -30,9 +40,9 @@ export default function ReportDetailsForm({
     };
 
     return (
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-7">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-7 pt-20">
             <div className="mb-7 flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                     <FileText size={20} />
                 </span>
 
@@ -63,7 +73,7 @@ export default function ReportDetailsForm({
                         onChange={handleTextChange}
                         maxLength={120}
                         placeholder="Contoh: Jalan berlubang di depan sekolah"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     />
 
                     {errors.title && (
@@ -93,7 +103,7 @@ export default function ReportDetailsForm({
                         maxLength={500}
                         rows={4}
                         placeholder={`Contoh: Terdapat lubang di badan jalan dengan diameter sekitar 50 cm dan kedalaman 10 cm. Kerusakan berada di dekat persimpangan dan sering tergenang air saat hujan, sehingga pengendara motor harus menghindar dan berisiko terjatuh.`}
-                        className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     />
 
                     <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
@@ -104,6 +114,48 @@ export default function ReportDetailsForm({
                     {errors.description && (
                         <p className="mt-1.5 text-sm text-red-600">
                             {errors.description}
+                        </p>
+                    )}
+                </div>
+
+                <div>
+                    <label
+                        htmlFor="type"
+                        className="mb-2 block text-sm font-semibold text-slate-800"
+                    >
+                        Tipe pelaporan <span className="text-red-500">*</span>
+                    </label>
+
+                    <select
+                        id="type"
+                        name="type"
+                        value={form.type}
+                        onChange={(event) => {
+                            const value = event.target.value as CreateReportPayload["type"];
+
+                            console.log("Tipe yang dipilih:", value);
+
+                            onChange("type", value);
+                        }}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    >
+                        <option value="" disabled>
+                            Pilih tipe pelaporan
+                        </option>
+
+                        {reportTypes.map((reportType) => (
+                            <option
+                                key={reportType.value}
+                                value={reportType.value}
+                            >
+                                {reportType.label}
+                            </option>
+                        ))}
+                    </select>
+
+                    {errors.type && (
+                        <p className="mt-1.5 text-sm text-red-600">
+                            {errors.type}
                         </p>
                     )}
                 </div>
@@ -123,8 +175,8 @@ export default function ReportDetailsForm({
                     error={errors.images}
                 />
 
-                <div className="flex items-start gap-2 rounded-xl bg-blue-50/80 p-3.5 text-sm leading-relaxed text-blue-800">
-                    <MapPin size={18} className="mt-0.5 shrink-0 text-blue-600" />
+                <div className="flex items-start gap-2 rounded-xl bg-emerald-50/80 p-3.5 text-sm leading-relaxed text-emerald-800">
+                    <MapPin size={18} className="mt-0.5 shrink-0 text-emerald-600" />
                     <p>
                         Pastikan lokasi pada peta sesuai dengan lokasi kerusakan yang
                         Anda laporkan.

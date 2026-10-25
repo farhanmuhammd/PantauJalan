@@ -1,4 +1,11 @@
 export type ReportSeverity = "ringan" | "sedang" | "berat";
+export type TypeReport =
+  | "jalan"
+  | "lampu-jalan"
+  | "trotoar"
+  | "halte"
+  | "taman"
+  | "lainnya";
 
 export interface CreateReportPayload {
   title: string;
@@ -6,6 +13,7 @@ export interface CreateReportPayload {
   severity: ReportSeverity | "";
   latitude: number;
   longitude: number;
+  type: TypeReport | "";
   images: File[];
 }
 
@@ -15,6 +23,7 @@ export const initialPengaduanForm: CreateReportPayload = {
   severity: "",
   latitude: 3.587576,
   longitude: 98.642247,
+  type: "",
   images: [],
 };
 
@@ -41,6 +50,7 @@ export interface ReportItem {
   address: string;
   severity: ReportSeverity;
   status: ReportStatus;
+  type: string;
   images: string[];
   location: {
     type: "Point";
