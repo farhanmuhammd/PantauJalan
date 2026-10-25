@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { LogIn } from "lucide-react";
 
 const navLinks = [
     { labelKey: "nav.home", defaultLabel: "Beranda", href: "/", type: "route" },
     { labelKey: "nav.reports", defaultLabel: "Pengaduan", href: "/pengaduan", type: "route" },
     { labelKey: "nav.navigation", defaultLabel: "Navigasi", href: "/navigasi", type: "route" },
-    { labelKey: "nav.faq", defaultLabel: "FAQ", href: "#faq", type: "anchor" },
 ] as const;
 
 function LocationPin() {
@@ -136,7 +136,13 @@ export default function Navbar() {
                                 </a>
                             );
                         })}
-
+                        <Link
+                            to="/admin/login"
+                            className="ml-2 inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-700 shadow-sm transition-all duration-200 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                        >
+                            <LogIn size={17} strokeWidth={2} />
+                            <span>{t("nav.officerLogin", "Login Petugas")}</span>
+                        </Link>
                         <LanguageSwitcher />
                     </div>
 
@@ -193,6 +199,16 @@ export default function Navbar() {
                                     </li>
                                 );
                             })}
+                            <li className="mt-3 border-t border-slate-100 pt-3">
+                                <Link
+                                    to="/admin/login"
+                                    onClick={() => setOpen(false)}
+                                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                                >
+                                    <LogIn size={18} strokeWidth={2} />
+                                    <span>{t("nav.officerLogin", "Login Petugas")}</span>
+                                </Link>
+                            </li>
                         </ul>
                     </div>
                 </div>
