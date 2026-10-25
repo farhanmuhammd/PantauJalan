@@ -40,6 +40,11 @@ export const getReports = async (req, res, next) => {
       filter.status = status;
     }
 
+    // Filter berdasarkan tipe laporan
+    if (type) {
+      filter.type = type;
+    }
+
     // Filter berdasarkan tingkat keparahan
     if (severity) {
       filter.severity = severity;
@@ -99,7 +104,7 @@ export const getReportById = async (req, res, next) => {
 // GET /api/reports/summary
 export const getReportSummary = async (req, res, next) => {
   try {
-    const { status, severity, groupBy } = req.query;
+    const { status, severity, groupBy, type } = req.query;
 
     if (groupBy && !REGION_FIELDS.includes(groupBy)) {
       return error(res, {
@@ -112,6 +117,7 @@ export const getReportSummary = async (req, res, next) => {
 
     if (status) match.status = status;
     if (severity) match.severity = severity;
+    if (type) match.type = type;
 
     const fields = groupBy ? [groupBy] : REGION_FIELDS;
 
@@ -145,11 +151,12 @@ export const createReport = async (req, res, next) => {
   const images = toImagePaths(req.files);
   try {
     const body = req.body ?? {};
-    const { title, description, severity } = body;
+    const { title, description, type, severity } = body;
     const payload = {
       title,
       description,
       address: typeof body.address === "string" ? body.address.trim() : "",
+      type,
       severity,
       images,
     };
@@ -227,7 +234,7 @@ export const updateReport = async (req, res, next) => {
       return error(res, { message: `Total gambar maksimal ${MAX_IMAGES}`, statusCode: 400 });
     }
 
-    const fields = ["title", "description", "address", "severity"];
+    const fields = ["title", "description", "address", "type", "severity"];
     if (STAFF_ROLES.includes(req.user.role)) fields.push("status");
     fields.forEach((f) => {
       if (body[f] !== undefined) report[f] = body[f];

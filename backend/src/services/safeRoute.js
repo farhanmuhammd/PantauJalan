@@ -35,9 +35,10 @@ const VEHICLE_LABEL = { mobil: "mobil", motor: "motor", jalan_kaki: "pejalan kak
 const findNearbyReports = async (coords) => {
   const candidates = await Report.find({
     status: { $in: CFG.statuses },
+    type: "jalan",
     location: { $geoWithin: { $geometry: bboxPolygon(coords, CFG.bufferM * 2) } },
   })
-    .select("title severity status address location images")
+    .select("title type severity status address location images")
     .lean();
 
   const found = [];
@@ -49,6 +50,7 @@ const findNearbyReports = async (coords) => {
       id: r._id.toString(),
       title: r.title,
       address: r.address,
+      type: r.type,
       severity: r.severity,
       status: r.status,
       images: (r.images || []).map((p) => `${process.env.BASE_URL}/${p}`),
@@ -221,6 +223,7 @@ export const findSafeRoute = async (origin, destination, vehicle = "mobil") => {
 export const getActiveHazardsGeoJSON = async (bbox) => {
   const filter = {
     status: { $in: CFG.statuses },
+    type: "jalan",
     "location.coordinates.0": { $exists: true },
   };
 
@@ -237,7 +240,7 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
   }
 
   const reports = await Report.find(filter)
-    .select("title severity status address location images")
+    .select("title type severity status address location images")
     .limit(1000)
     .lean();
 
@@ -249,6 +252,7 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
       properties: {
         id: r._id.toString(),
         title: r.title,
+        type: r.type,
         address: r.address,
         severity: r.severity,
         status: r.status,

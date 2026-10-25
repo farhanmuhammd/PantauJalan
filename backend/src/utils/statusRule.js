@@ -1,6 +1,7 @@
 export const SEVERITY = ["ringan", "sedang", "berat"];
 export const STATUS = ["menunggu", "diverifikasi", "diproses", "selesai", "ditolak"];
 export const PROGRESS_STATUS = ["direncanakan", "dikerjakan", "selesai"];
+export const REPORT_TYPES = ["jalan", "lampu-jalan", "trotoar", "halte", "taman", "lainnya"];
 
 /**
  * Tentukan status laporan setelah progres berubah.

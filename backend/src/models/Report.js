@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { SEVERITY, STATUS } from "../utils/statusRule.js";
+import { SEVERITY, STATUS, REPORT_TYPES } from "../utils/statusRule.js";
 
-export { SEVERITY, STATUS };
+export { SEVERITY, STATUS, REPORT_TYPES };
 
 const reportSchema = new mongoose.Schema(
   {
@@ -13,6 +13,7 @@ const reportSchema = new mongoose.Schema(
     district: { type: String, trim: true, default: null },
     regency: { type: String, trim: true, default: null },
     province: { type: String, trim: true, default: null },
+    type: { type: String, enum: REPORT_TYPES, default: "lainnya" },
     severity: { type: String, enum: SEVERITY, default: "ringan" },
     status: { type: String, enum: STATUS, default: "menunggu" },
     images: { type: [String], default: [] },
