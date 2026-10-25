@@ -26,3 +26,78 @@ export interface CreateReportResponse {
   };
   [key: string]: unknown;
 }
+
+export type ReportStatus =
+  | "menunggu"
+  | "diverifikasi"
+  | "diproses"
+  | "selesai"
+  | "ditolak";
+
+export interface ReportItem {
+  _id: string;
+  title: string;
+  description: string;
+  address: string;
+  severity: ReportSeverity;
+  status: ReportStatus;
+  images: string[];
+  location: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportListResponse {
+  success: boolean;
+  message: string;
+  data: ReportItem[];
+  meta: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface ReportSummaryItem {
+  total: number;
+  name: string;
+}
+
+export interface ReportSummaryData {
+  statusSummary: {
+    total: number;
+    status: ReportStatus;
+  }[];
+  street: ReportSummaryItem[];
+  village: ReportSummaryItem[];
+  district: ReportSummaryItem[];
+  regency: ReportSummaryItem[];
+  province: ReportSummaryItem[];
+}
+
+export interface ReportSummaryResponse {
+  success: boolean;
+  message: string;
+  data: ReportSummaryData;
+  meta: {
+    groupBy: string | null;
+    totalReports: number;
+  };
+}
+
+export interface GetReportsParams {
+  page?: number;
+  limit?: number;
+  status?: ReportStatus;
+  search?: string;
+}
+
+export interface GetReportSummaryParams {
+  status?: ReportStatus;
+}
