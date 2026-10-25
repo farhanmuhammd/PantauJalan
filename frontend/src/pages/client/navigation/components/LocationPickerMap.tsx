@@ -201,7 +201,7 @@ export default function LocationPickerMap({
                     </MapContainer>
 
                     <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-lg bg-white/95 px-3 py-2 text-xs font-medium text-slate-600 shadow">
-                        <MapPin size={14} className="mr-1 inline text-blue-600" />
+                        <MapPin size={14} className="mr-1 inline text-emerald-600" />
                         Ketuk peta untuk memilih titik
                     </div>
                 </div>
@@ -249,7 +249,7 @@ export default function LocationPickerMap({
                                     );
                                 }
                             }}
-                            className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                            className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
                         >
                             Gunakan lokasi
                         </button>

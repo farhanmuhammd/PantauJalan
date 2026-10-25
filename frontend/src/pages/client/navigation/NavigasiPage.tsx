@@ -357,10 +357,10 @@ export default function NavigasiPage() {
         : null;
 
     return (
-        <main className="min-h-screen text-slate-900 mx-20">
+        <main className="min-h-screen text-slate-900 lg:mx-20 pt-20">
             <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
                 <div className="mb-5">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-600">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600">
                         <ShieldCheck size={15} />
                         Navigasi berbasis laporan kerusakan
                     </div>
@@ -383,7 +383,7 @@ export default function NavigasiPage() {
                         >
                             <div className="mb-5 flex items-center justify-between">
                                 <h2 className="text-base font-bold">Rencanakan perjalanan</h2>
-                                <RouteIcon size={19} className="text-blue-600" />
+                                <RouteIcon size={19} className="text-emerald-600" />
                             </div>
 
                             <div className="relative space-y-4">
@@ -431,7 +431,7 @@ export default function NavigasiPage() {
                                                 aria-pressed={selected}
                                                 onClick={() => updateForm("vehicle", vehicle.value)}
                                                 className={`flex flex-col items-center gap-2 rounded-xl border px-2 py-3 text-xs font-semibold transition ${selected
-                                                    ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-100"
+                                                    ? "border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-100"
                                                     : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
                                                     }`}
                                             >
@@ -452,7 +452,7 @@ export default function NavigasiPage() {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
                             >
                                 {isLoading ? (
                                     <>
@@ -489,14 +489,14 @@ export default function NavigasiPage() {
                         />
 
                         {isRerouting && (
-                            <p className="mt-2 text-sm font-medium text-blue-600">
+                            <p className="mt-2 text-sm font-medium text-emerald-600">
                                 Menghitung ulang rute aman...
                             </p>
                         )}
 
                         {!routeData && (
-                            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-blue-100 bg-white p-4">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-emerald-100 bg-white p-4">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                                     <ShieldCheck size={20} />
                                 </span>
                                 <div>

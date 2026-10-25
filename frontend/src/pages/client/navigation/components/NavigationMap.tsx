@@ -372,7 +372,7 @@ export default function NavigationMap({
     }, [isNavigating, currentPosition, routePoints, onReroute]);
 
     return (
-        <div className="relative h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-[540px] lg:h-[calc(100vh-190px)] lg:min-h-[560px]">
+        <div className="relative z-10 h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-[540px] lg:h-[calc(100vh-190px)] lg:min-h-[560px]">
             <MapContainer
                 center={defaultCenter}
                 zoom={13}
