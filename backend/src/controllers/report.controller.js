@@ -31,7 +31,7 @@ const buildLocation = (body) => {
 export const getReports = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const { search, status, severity, order, today } = req.query;
+    const { search, status, severity, order, today, type } = req.query;
 
     const filter = {};
 
