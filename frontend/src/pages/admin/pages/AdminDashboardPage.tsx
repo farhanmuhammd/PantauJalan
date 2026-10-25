@@ -1,173 +1,175 @@
-import { useNavigate } from "react-router";
+import { useCallback, useEffect, useState } from "react";
 import {
-    Activity,
-    AlertTriangle,
-    Clock3,
-    LogOut,
-    MapPinned,
-    ShieldCheck,
-    UserRound,
+  Activity,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  RefreshCw,
 } from "lucide-react";
-import { getAdminUser, clearAdminSession } from "../utils/auth-storage";
+import { Link } from "react-router";
+import {
+  getAdminReports,
+  getAdminReportSummary,
+} from "../api/reports-admin.api";
+import type { ReportSummaryResponse } from "../../client/reports/types/reports.types";
+import ReportStatusChart from "./dashboard/components/ReportStatusChart";
+import TodayReportsTable from "./dashboard/components/TodayReportsTable";
+import RegionDistributionCard from "./dashboard/components/Regiondistributioncard";
 
 export default function AdminDashboardPage() {
-    const navigate = useNavigate();
-    const user = getAdminUser();
+  const [summary, setSummary] = useState<ReportSummaryResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-    const handleLogout = () => {
-        clearAdminSession();
-        navigate("/admin/login", { replace: true });
-    };
+  const loadSummary = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await getAdminReportSummary();
+      setSummary(response);
+    } catch {
+      setError(
+        "Ringkasan laporan gagal dimuat. Periksa koneksi API lalu coba kembali.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const stats = [
-        {
-            label: "Total laporan",
-            value: "—",
-            description: "Data belum dihubungkan",
-            icon: AlertTriangle,
-            color: "bg-amber-50 text-amber-700",
-        },
-        {
-            label: "Laporan diproses",
-            value: "—",
-            description: "Data belum dihubungkan",
-            icon: Clock3,
-            color: "bg-blue-50 text-blue-700",
-        },
-        {
-            label: "Titik kerusakan",
-            value: "—",
-            description: "Data belum dihubungkan",
-            icon: MapPinned,
-            color: "bg-emerald-50 text-emerald-700",
-        },
-        {
-            label: "Status sistem",
-            value: "Admin",
-            description: "Sesi administrator aktif",
-            icon: Activity,
-            color: "bg-violet-50 text-violet-700",
-        },
-    ];
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadSummary();
+  }, []);
 
-    return (
-        <main className="min-h-screen bg-slate-50">
-            <header className="border-b border-slate-200 bg-white">
-                <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-                    <div className="flex items-center gap-3">
-                        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-700 text-white">
-                            <ShieldCheck size={24} />
-                        </span>
-                        <div>
-                            <h1 className="font-bold text-slate-900">PantauJalan</h1>
-                            <p className="text-xs text-slate-500">Admin Dashboard</p>
-                        </div>
-                    </div>
+  const loadTodayReports = useCallback(
+    () => getAdminReports({ page: 1, limit: 10, today: true }),
+    [],
+  );
 
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                    >
-                        <LogOut size={17} />
-                        <span className="hidden sm:inline">Keluar</span>
-                    </button>
-                </div>
-            </header>
+  const statusCount = (status: string) =>
+    summary?.data.statusSummary.find((item) => item.status === status)?.total ??
+    0;
 
-            <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
-                <section className="flex flex-col justify-between gap-5 rounded-2xl bg-gradient-to-r from-teal-800 to-teal-600 p-6 text-white sm:flex-row sm:items-center sm:p-8">
-                    <div>
-                        <p className="text-sm font-medium text-teal-100">
-                            Ringkasan administrasi
-                        </p>
-                        <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
-                            Halo, {user?.name || "Administrator"}
-                        </h2>
-                        <p className="mt-2 max-w-xl text-sm leading-6 text-teal-50">
-                            Selamat datang di dashboard admin PantauJalan.
-                            Kelola informasi dan pantau laporan kerusakan jalan dari sini.
-                        </p>
-                    </div>
+  const cards = [
+    {
+      label: "Total laporan",
+      value: summary?.meta.totalReports ?? 0,
+      description: "Seluruh laporan masyarakat",
+      icon: FileText,
+      style: "bg-emerald-50 text-emerald-700",
+    },
+    {
+      label: "Menunggu",
+      value: statusCount("menunggu"),
+      description: "Perlu ditindaklanjuti",
+      icon: Clock3,
+      style: "bg-amber-50 text-amber-700",
+    },
+    {
+      label: "Sedang diproses",
+      value: statusCount("diproses"),
+      description: "Dalam penanganan petugas",
+      icon: Activity,
+      style: "bg-lime-50 text-lime-700",
+    },
+    {
+      label: "Selesai",
+      value: statusCount("selesai"),
+      description: "Penanganan telah selesai",
+      icon: CheckCircle2,
+      style: "bg-emerald-50 text-emerald-700",
+    },
+  ];
 
-                    <div className="flex shrink-0 items-center gap-3 rounded-xl border border-white/20 bg-white/10 p-4">
-                        <UserRound size={22} />
-                        <div>
-                            <p className="text-sm font-semibold">{user?.name}</p>
-                            <p className="text-xs text-teal-100">{user?.email}</p>
-                        </div>
-                    </div>
-                </section>
+  return (
+    <div className="space-y-6">
+      <section className="relative flex flex-col justify-between gap-4 overflow-hidden rounded-3xl bg-emerald-800 p-6 text-white sm:flex-row sm:items-center sm:p-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border-[36px] border-white/5"
+        />
+        <div className="relative">
+          <p className="text-sm text-emerald-100">Ringkasan administrasi</p>
+          <h2 className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
+            Pantau laporan masyarakat
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-100/85">
+            Pantau status pengaduan, identifikasi wilayah yang sering
+            dilaporkan, dan bantu petugas menentukan prioritas penanganan.
+          </p>
+        </div>
+        <Link
+          to="/admin/reports"
+          className="relative inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-50"
+        >
+          Kelola laporan <ArrowUpRight size={17} />
+        </Link>
+      </section>
 
-                <section className="mt-8">
-                    <div>
-                        <h3 className="text-lg font-bold text-slate-900">
-                            Ringkasan dashboard
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Statistik akan tersedia setelah API dashboard dihubungkan.
-                        </p>
-                    </div>
+      {error && (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span>{error}</span>
+          <button
+            onClick={() => void loadSummary()}
+            className="inline-flex items-center gap-2 font-semibold"
+          >
+            <RefreshCw size={15} /> Coba lagi
+          </button>
+        </div>
+      )}
 
-                    <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                        {stats.map((stat) => {
-                            const Icon = stat.icon;
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <article
+              key={card.label}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-500">
+                  {card.label}
+                </span>
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.style}`}
+                >
+                  <Icon size={20} />
+                </span>
+              </div>
+              <p className="mt-5 text-3xl font-bold tracking-tight text-slate-900">
+                {loading ? "—" : card.value.toLocaleString("id-ID")}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">{card.description}</p>
+            </article>
+          );
+        })}
+      </section>
 
-                            return (
-                                <article
-                                    key={stat.label}
-                                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-sm font-medium text-slate-500">
-                                            {stat.label}
-                                        </p>
-                                        <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.color}`}>
-                                            <Icon size={20} />
-                                        </span>
-                                    </div>
-                                    <p className="mt-5 text-2xl font-bold text-slate-900">
-                                        {stat.value}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-400">
-                                        {stat.description}
-                                    </p>
-                                </article>
-                            );
-                        })}
-                    </div>
-                </section>
+      <TodayReportsTable load={loadTodayReports} />
 
-                <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
-                    <h3 className="font-bold text-slate-900">Informasi akun</h3>
-                    <div className="mt-4 divide-y divide-slate-100">
-                        <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between">
-                            <span className="text-sm text-slate-500">Nama</span>
-                            <span className="text-sm font-medium text-slate-800">
-                                {user?.name || "—"}
-                            </span>
-                        </div>
-                        <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between">
-                            <span className="text-sm text-slate-500">Email</span>
-                            <span className="text-sm font-medium text-slate-800">
-                                {user?.email || "—"}
-                            </span>
-                        </div>
-                        <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between">
-                            <span className="text-sm text-slate-500">Role</span>
-                            <span className="text-sm font-medium text-slate-800">
-                                {user?.role || "—"}
-                            </span>
-                        </div>
-                        <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between">
-                            <span className="text-sm text-slate-500">Status akun</span>
-                            <span className="text-sm font-medium text-emerald-700">
-                                {user?.isActive ? "Aktif" : "Tidak aktif"}
-                            </span>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </main>
-    );
+      {loading ? (
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div className="h-[560px] animate-pulse rounded-2xl bg-slate-200/70" />
+          <div className="h-[560px] animate-pulse rounded-2xl bg-slate-200/70" />
+        </div>
+      ) : (
+        summary && (
+          <section className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+            <ReportStatusChart
+              summary={summary.data.statusSummary}
+              total={summary.meta.totalReports}
+            />
+            <RegionDistributionCard
+              districts={summary.data.district ?? []}
+              villages={summary.data.village ?? []}
+            />
+          </section>
+        )
+      )}
+    </div>
+  );
 }
