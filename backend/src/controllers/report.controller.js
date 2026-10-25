@@ -31,7 +31,7 @@ const buildLocation = (body) => {
 export const getReports = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const { search, status, severity, order } = req.query;
+    const { search, status, severity, order, today } = req.query;
 
     const filter = {};
 
@@ -48,6 +48,20 @@ export const getReports = async (req, res, next) => {
     // Filter berdasarkan tingkat keparahan
     if (severity) {
       filter.severity = severity;
+    }
+
+    // Filter laporan yang dibuat hari ini
+    if (today === "true") {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      filter.createdAt = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
     }
 
     // Pencarian berdasarkan judul, deskripsi, dan alamat
@@ -85,6 +99,7 @@ export const getReports = async (req, res, next) => {
   }
 };
 
+
 // GET /api/reports/:id
 export const getReportById = async (req, res, next) => {
   try {
@@ -102,6 +117,7 @@ export const getReportById = async (req, res, next) => {
 };
 
 // GET /api/reports/summary
+
 export const getReportSummary = async (req, res, next) => {
   try {
     const { status, severity, groupBy, type } = req.query;
@@ -121,7 +137,25 @@ export const getReportSummary = async (req, res, next) => {
 
     const fields = groupBy ? [groupBy] : REGION_FIELDS;
 
-    const facets = {};
+    const facets = {
+      statusSummary: [
+        {
+          $group: {
+            _id: "$status",
+            total: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            status: "$_id",
+            total: 1,
+          },
+        },
+        { $sort: { status: 1 } },
+      ],
+    };
+
     fields.forEach((f) => {
       facets[f] = [
         { $match: { [f]: { $ne: null } } },
@@ -132,7 +166,8 @@ export const getReportSummary = async (req, res, next) => {
     });
 
     const [data, totalReports] = await Promise.all([
-      Report.aggregate([{ $match: match }, { $facet: facets }]).then((r) => r[0]),
+      Report.aggregate([{ $match: match }, { $facet: facets }])
+        .then((r) => r[0]),
       Report.countDocuments(match),
     ]);
 
@@ -145,6 +180,7 @@ export const getReportSummary = async (req, res, next) => {
     next(err);
   }
 };
+
 
 // POST /api/reports
 export const createReport = async (req, res, next) => {
