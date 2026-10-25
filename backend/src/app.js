@@ -8,6 +8,7 @@ import routeRoutes from "./routes/route.routes.js";
 import progressRoutes from "./routes/progress.routes.js";
 import { notFound, errorHandler } from "./middlewares/errorHandler.js";
 import { success } from "./utils/responseFormatter.js";
+import os from "os";
 
 const app = express();
 
@@ -17,7 +18,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(process.cwd(), "public")));
 
 // Gambar bisa diakses lewat http://localhost:5000/uploads/reports/namafile.jpg
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use(
+    "/uploads",
+    express.static(path.join(os.tmpdir(), "uploads")),
+);
 
 app.get("/", (_req, res) => success(res, { message: "PantauJalan API berjalan" }));
 app.use("/api/auth", authRoutes);
