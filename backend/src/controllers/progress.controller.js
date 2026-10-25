@@ -85,34 +85,47 @@ export const getProgressById = async (req, res, next) => {
 // Body: title (wajib), description, status (direncanakan | dikerjakan | selesai, default dikerjakan)
 export const createProgress = async (req, res, next) => {
   const images = toImagePaths(req.files);
+
   try {
     const { reportId } = req.params;
+
     if (!mongoose.isValidObjectId(reportId)) {
       await removeFiles(images);
-      return error(res, { message: "ID laporan tidak valid", statusCode: 400 });
-    }
-
-    const report = await Report.findById(reportId);
-    if (!report) {
-      await removeFiles(images);
-      return error(res, { message: "Laporan tidak ditemukan", statusCode: 404 });
-    }
-    if (report.status === "ditolak") {
-      await removeFiles(images);
-      return error(res, { message: "Laporan yang ditolak tidak dapat diberi progres", statusCode: 400 });
-    }
-    if (report.status === "selesai") {
-      await removeFiles(images);
       return error(res, {
-        message: "Laporan sudah selesai. Ubah atau hapus progres 'selesai' terlebih dahulu jika ingin membuka kembali",
+        message: "ID laporan tidak valid",
         statusCode: 400,
       });
     }
-    if (images.length === 0) {
-      return error(res, { message: "Foto bukti wajib diunggah (minimal 1, field images)", statusCode: 422 });
+
+    const report = await Report.findById(reportId);
+
+    if (!report) {
+      await removeFiles(images);
+      return error(res, {
+        message: "Laporan tidak ditemukan",
+        statusCode: 404,
+      });
+    }
+
+    if (report.status === "ditolak") {
+      await removeFiles(images);
+      return error(res, {
+        message: "Laporan yang ditolak tidak dapat diberi progres",
+        statusCode: 400,
+      });
+    }
+
+    if (report.status === "selesai") {
+      await removeFiles(images);
+      return error(res, {
+        message:
+          "Laporan sudah selesai. Ubah atau hapus progres 'selesai' terlebih dahulu jika ingin membuka kembali",
+        statusCode: 400,
+      });
     }
 
     const body = req.body ?? {};
+
     const item = await RepairProgress.create({
       report: report._id,
       title: body.title,
@@ -124,18 +137,23 @@ export const createProgress = async (req, res, next) => {
     });
 
     const reportStatus = await syncReportStatus(report._id);
+
     return created(res, {
       message:
         reportStatus === "selesai"
           ? "Progres dicatat. Perbaikan selesai, status laporan otomatis menjadi selesai"
           : "Progres perbaikan berhasil dicatat",
-      data: { progress: item, reportStatus },
+      data: {
+        progress: item,
+        reportStatus,
+      },
     });
   } catch (err) {
     await removeFiles(images);
     next(err);
   }
 };
+
 
 // PUT /api/progress/:id  (admin/petugas) - Body opsional: title, description, status, removeImages
 export const updateProgress = async (req, res, next) => {
