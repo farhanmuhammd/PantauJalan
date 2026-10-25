@@ -6,14 +6,24 @@ import NavigasiPage from "./pages/client/navigation/NavigasiPage";
 import AdminLoginPage from "./pages/admin/pages/AdminLoginPage";
 import AdminProtectedRoute from "./pages/admin/components/AdminProtectedRoute";
 import AdminDashboardPage from "./pages/admin/pages/AdminDashboardPage";
+import AdminLayout from "./pages/admin/components/AdminLayout";
+import AdminReportListPage from "./pages/admin/pages/reports/AdminReportListPage";
+import AdminReportDetailPage from "./pages/admin/pages/reports/AdminReportDetailPage";
 import ForbiddenPage from "./pages/admin/pages/ForbiddenPage";
+import ReportListPage from "./pages/client/reports/ReportListPage";
+import ReportDetailPage from "./pages/client/reports/ReportDetailPage";
 
 export default function App() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/pengaduan" element={<ReportPage />} />
+        <Route path="/form-pengaduan" element={<ReportPage />} />
+        <Route path="/pengaduan" element={<ReportListPage />} />
+        <Route
+          path="/pengaduan/:reportId/detail"
+          element={<ReportDetailPage />}
+        />
         <Route path="/navigasi" element={<NavigasiPage />} />
       </Route>
 
@@ -22,7 +32,11 @@ export default function App() {
 
       {/* Halaman yang memerlukan sesi admin */}
       <Route element={<AdminProtectedRoute />}>
-        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route element={<AdminLayout />}>
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/reports" element={<AdminReportListPage />} />
+          <Route path="/admin/reports/:reportId" element={<AdminReportDetailPage />} />
+        </Route>
       </Route>
 
       {/* Halaman akses ditolak */}
