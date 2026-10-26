@@ -16,8 +16,15 @@ const reportSchema = new mongoose.Schema(
     type: { type: String, enum: REPORT_TYPES, default: "lainnya" },
     severity: { type: String, enum: SEVERITY, default: "ringan" },
     status: { type: String, enum: STATUS, default: "menunggu" },
-    images: { type: [String], default: [] },
-
+    images: {
+      type: [
+        {
+          url: { type: String, required: true },
+          public_id: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
     // GeoJSON Point, disimpan sebagai [lng, lat]. Dikirim dari FE (latitude dan longitude).
     // Wajib saat membuat laporan baru (dicek di controller agar data lama tanpa lokasi tetap bisa disimpan).
     location: {
@@ -44,7 +51,6 @@ reportSchema.index({ province: 1, regency: 1, district: 1, village: 1, street: 1
 
 reportSchema.set("toJSON", {
   transform: (_doc, ret) => {
-    ret.images = (ret.images || []).map((p) => `${process.env.BASE_URL}/${p}`);
     delete ret.__v;
     return ret;
   },

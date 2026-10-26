@@ -10,10 +10,14 @@ const repairProgressSchema = new mongoose.Schema(
     title: { type: String, required: [true, "Judul progres wajib diisi"], trim: true, maxlength: 150 },
     description: { type: String, trim: true, default: "" },
     status: { type: String, enum: PROGRESS_STATUS, default: "dikerjakan" },
-    // Bukti foto, minimal 1 untuk setiap progres.
     images: {
-      type: [String],
-      default: []
+      type: [
+        {
+          url: { type: String, required: true },
+          public_id: { type: String, required: true },
+        },
+      ],
+      default: [],
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     createdByName: { type: String, trim: true },
@@ -25,7 +29,6 @@ repairProgressSchema.index({ report: 1, createdAt: 1 });
 
 repairProgressSchema.set("toJSON", {
   transform: (_doc, ret) => {
-    ret.images = (ret.images || []).map((p) => `${process.env.BASE_URL}/${p}`);
     delete ret.__v;
     return ret;
   },

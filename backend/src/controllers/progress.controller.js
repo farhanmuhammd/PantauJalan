@@ -6,11 +6,12 @@ import { MAX_IMAGES } from "../middlewares/upload.js";
 import { syncReportStatus } from "../services/reportStatus.js";
 import { success, created, error } from "../utils/responseFormatter.js";
 import { removeFiles } from "../utils/file.js";
+import { deleteImages, uploadImage } from "../utils/cloudinaryUpload.js";
 
 const toImagePaths = (files = []) => files.map((f) => `uploads/progress/${f.filename}`);
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// GET /api/reports/:reportId/progress  (publik) -> timeline dari yang paling lama
+// GET /api/reports/:reportId/progress (publik)
 export const listProgress = async (req, res, next) => {
   try {
     const { reportId } = req.params;
@@ -32,15 +33,12 @@ export const listProgress = async (req, res, next) => {
       });
     }
 
-    // Filter progres berdasarkan laporan
     const filter = { report: reportId };
 
-    // Filter berdasarkan status progres
     if (status) {
       filter.status = status;
     }
 
-    // Search berdasarkan judul dan deskripsi progres
     if (search?.trim()) {
       const regex = new RegExp(escapeRegex(search.trim()), "i");
 
@@ -51,14 +49,24 @@ export const listProgress = async (req, res, next) => {
     }
 
     const items = await RepairProgress.find(filter)
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: 1 })
+      .lean();
+
+    const data = items.map((item) => ({
+      ...item,
+      images: (item.images ?? [])
+        .map((image) =>
+          typeof image === "string" ? image : image?.url
+        )
+        .filter(Boolean),
+    }));
 
     return success(res, {
       message: "Progres perbaikan berhasil diambil",
-      data: items,
+      data,
       meta: {
         reportStatus: report.status,
-        totalItems: items.length,
+        totalItems: data.length,
       },
     });
   } catch (err) {
@@ -66,16 +74,40 @@ export const listProgress = async (req, res, next) => {
   }
 };
 
-// GET /api/progress/:id  (publik)
+// GET /api/progress/:id (publik)
 export const getProgressById = async (req, res, next) => {
   try {
     const { id } = req.params;
+
     if (!mongoose.isValidObjectId(id)) {
-      return error(res, { message: "ID progres tidak valid", statusCode: 400 });
+      return error(res, {
+        message: "ID progres tidak valid",
+        statusCode: 400,
+      });
     }
-    const item = await RepairProgress.findById(id);
-    if (!item) return error(res, { message: "Progres tidak ditemukan", statusCode: 404 });
-    return success(res, { message: "Detail progres berhasil diambil", data: item });
+
+    const item = await RepairProgress.findById(id).lean();
+
+    if (!item) {
+      return error(res, {
+        message: "Progres tidak ditemukan",
+        statusCode: 404,
+      });
+    }
+
+    const data = {
+      ...item,
+      images: (item.images ?? [])
+        .map((image) =>
+          typeof image === "string" ? image : image?.url
+        )
+        .filter(Boolean),
+    };
+
+    return success(res, {
+      message: "Detail progres berhasil diambil",
+      data,
+    });
   } catch (err) {
     next(err);
   }
@@ -84,13 +116,13 @@ export const getProgressById = async (req, res, next) => {
 // POST /api/reports/:reportId/progress  (admin/petugas, form-data, field images wajib minimal 1)
 // Body: title (wajib), description, status (direncanakan | dikerjakan | selesai, default dikerjakan)
 export const createProgress = async (req, res, next) => {
-  const images = toImagePaths(req.files);
+  const uploadedImages = [];
+  let saved = false;
 
   try {
     const { reportId } = req.params;
 
     if (!mongoose.isValidObjectId(reportId)) {
-      await removeFiles(images);
       return error(res, {
         message: "ID laporan tidak valid",
         statusCode: 400,
@@ -100,7 +132,6 @@ export const createProgress = async (req, res, next) => {
     const report = await Report.findById(reportId);
 
     if (!report) {
-      await removeFiles(images);
       return error(res, {
         message: "Laporan tidak ditemukan",
         statusCode: 404,
@@ -108,7 +139,6 @@ export const createProgress = async (req, res, next) => {
     }
 
     if (report.status === "ditolak") {
-      await removeFiles(images);
       return error(res, {
         message: "Laporan yang ditolak tidak dapat diberi progres",
         statusCode: 400,
@@ -116,7 +146,6 @@ export const createProgress = async (req, res, next) => {
     }
 
     if (report.status === "selesai") {
-      await removeFiles(images);
       return error(res, {
         message:
           "Laporan sudah selesai. Ubah atau hapus progres 'selesai' terlebih dahulu jika ingin membuka kembali",
@@ -124,17 +153,34 @@ export const createProgress = async (req, res, next) => {
       });
     }
 
+    const files = req.files ?? [];
+
+    if (files.length < 1) {
+      return error(res, {
+        message: "Setiap progres harus memiliki minimal 1 foto bukti",
+        statusCode: 422,
+      });
+    }
+
     const body = req.body ?? {};
+
+    // Upload foto bukti ke Cloudinary.
+    for (const file of files) {
+      const image = await uploadImage(file, "progress");
+      uploadedImages.push(image);
+    }
 
     const item = await RepairProgress.create({
       report: report._id,
       title: body.title,
       description: body.description,
       status: body.status || undefined,
-      images,
+      images: uploadedImages,
       createdBy: req.user._id,
       createdByName: req.user.name,
     });
+
+    saved = true;
 
     const reportStatus = await syncReportStatus(report._id);
 
@@ -149,59 +195,136 @@ export const createProgress = async (req, res, next) => {
       },
     });
   } catch (err) {
-    await removeFiles(images);
-    next(err);
+    // Jangan hapus foto yang sudah direferensikan oleh data tersimpan.
+    if (!saved && uploadedImages.length > 0) {
+      try {
+        await deleteImages(uploadedImages);
+      } catch (cleanupError) {
+        console.error(
+          "Gagal membersihkan foto progres di Cloudinary:",
+          cleanupError.message,
+        );
+      }
+    }
+
+    return next(err);
   }
 };
 
-
 // PUT /api/progress/:id  (admin/petugas) - Body opsional: title, description, status, removeImages
 export const updateProgress = async (req, res, next) => {
-  const newImages = toImagePaths(req.files);
+  const uploadedImages = [];
+  let saved = false;
+
   try {
     const { id } = req.params;
+
     if (!mongoose.isValidObjectId(id)) {
-      await removeFiles(newImages);
-      return error(res, { message: "ID progres tidak valid", statusCode: 400 });
+      return error(res, {
+        message: "ID progres tidak valid",
+        statusCode: 400,
+      });
     }
+
     const item = await RepairProgress.findById(id);
+
     if (!item) {
-      await removeFiles(newImages);
-      return error(res, { message: "Progres tidak ditemukan", statusCode: 404 });
+      return error(res, {
+        message: "Progres tidak ditemukan",
+        statusCode: 404,
+      });
     }
 
     const body = req.body ?? {};
+    const currentImages = item.images ?? [];
+
+    // removeImages berisi public_id gambar Cloudinary.
     let removeList = body.removeImages || [];
-    if (!Array.isArray(removeList)) removeList = [removeList];
-    const removeNames = removeList.map((p) => path.basename(String(p)));
-    const toRemove = item.images.filter((p) => removeNames.includes(path.basename(p)));
-    const remaining = item.images.filter((p) => !toRemove.includes(p));
 
-    const total = remaining.length + newImages.length;
+    if (!Array.isArray(removeList)) {
+      removeList = [removeList];
+    }
+
+    const toRemove = currentImages.filter(
+      (image) =>
+        image?.public_id &&
+        removeList.includes(image.public_id),
+    );
+
+    const remaining = currentImages.filter(
+      (image) => !toRemove.includes(image),
+    );
+
+    const files = req.files ?? [];
+    const total = remaining.length + files.length;
+
     if (total > MAX_IMAGES) {
-      await removeFiles(newImages);
-      return error(res, { message: `Total foto maksimal ${MAX_IMAGES}`, statusCode: 400 });
-    }
-    if (total < 1) {
-      await removeFiles(newImages);
-      return error(res, { message: "Setiap progres harus memiliki minimal 1 foto bukti", statusCode: 422 });
+      return error(res, {
+        message: `Total foto maksimal ${MAX_IMAGES}`,
+        statusCode: 400,
+      });
     }
 
-    ["title", "description", "status"].forEach((f) => {
-      if (body[f] !== undefined) item[f] = body[f];
+    if (total < 1) {
+      return error(res, {
+        message:
+          "Setiap progres harus memiliki minimal 1 foto bukti",
+        statusCode: 422,
+      });
+    }
+
+    ["title", "description", "status"].forEach((field) => {
+      if (body[field] !== undefined) {
+        item[field] = body[field];
+      }
     });
-    item.images = [...remaining, ...newImages];
+
+    // Upload foto baru ke Cloudinary.
+    for (const file of files) {
+      const image = await uploadImage(file, "progress");
+      uploadedImages.push(image);
+    }
+
+    item.images = [...remaining, ...uploadedImages];
+
     await item.save();
-    await removeFiles(toRemove); // hapus file lama setelah data tersimpan
+    saved = true;
+
+    // Hapus foto lama setelah perubahan database berhasil.
+    if (toRemove.length > 0) {
+      try {
+        await deleteImages(toRemove);
+      } catch (deleteError) {
+        console.error(
+          "Gagal menghapus foto lama dari Cloudinary:",
+          deleteError.message,
+        );
+      }
+    }
 
     const reportStatus = await syncReportStatus(item.report);
+
     return success(res, {
       message: "Progres perbaikan berhasil diperbarui",
-      data: { progress: item, reportStatus },
+      data: {
+        progress: item,
+        reportStatus,
+      },
     });
   } catch (err) {
-    await removeFiles(newImages);
-    next(err);
+    // Hanya hapus foto baru jika belum tersimpan di database.
+    if (!saved && uploadedImages.length > 0) {
+      try {
+        await deleteImages(uploadedImages);
+      } catch (cleanupError) {
+        console.error(
+          "Gagal membersihkan foto baru di Cloudinary:",
+          cleanupError.message,
+        );
+      }
+    }
+
+    return next(err);
   }
 };
 

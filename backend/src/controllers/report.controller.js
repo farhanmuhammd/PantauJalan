@@ -7,6 +7,7 @@ import { success, created, error } from "../utils/responseFormatter.js";
 import { getPagination, buildMeta } from "../utils/paginator.js";
 import { removeFiles } from "../utils/file.js";
 import { resolveLocation } from "../services/geoCode.js";
+import { deleteImages, uploadImage } from "../utils/cloudinaryUpload.js";
 
 const STAFF_ROLES = ["admin", "petugas"];
 const canManage = (user, report) =>
@@ -35,22 +36,10 @@ export const getReports = async (req, res, next) => {
 
     const filter = {};
 
-    // Filter berdasarkan status laporan
-    if (status) {
-      filter.status = status;
-    }
+    if (status) filter.status = status;
+    if (type) filter.type = type;
+    if (severity) filter.severity = severity;
 
-    // Filter berdasarkan tipe laporan
-    if (type) {
-      filter.type = type;
-    }
-
-    // Filter berdasarkan tingkat keparahan
-    if (severity) {
-      filter.severity = severity;
-    }
-
-    // Filter laporan yang dibuat hari ini
     if (today === "true") {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -64,7 +53,6 @@ export const getReports = async (req, res, next) => {
       };
     }
 
-    // Pencarian berdasarkan judul, deskripsi, dan alamat
     if (search?.trim()) {
       const regex = new RegExp(escapeRegex(search.trim()), "i");
 
@@ -75,7 +63,6 @@ export const getReports = async (req, res, next) => {
       ];
     }
 
-    // Urutkan berdasarkan waktu pembuatan
     const sort = {
       createdAt: order === "asc" ? 1 : -1,
     };
@@ -89,9 +76,20 @@ export const getReports = async (req, res, next) => {
       Report.countDocuments(filter),
     ]);
 
+    const data = items.map((item) => {
+      const report = item.toJSON();
+
+      return {
+        ...report,
+        images: (item.images ?? []).map((image) =>
+          typeof image === "string" ? image : image.url
+        ),
+      };
+    });
+
     return success(res, {
       message: "Daftar laporan berhasil diambil",
-      data: items,
+      data,
       meta: buildMeta({ page, limit, totalItems }),
     });
   } catch (err) {
@@ -110,7 +108,14 @@ export const getReportById = async (req, res, next) => {
     const report = await Report.findById(id);
     if (!report) return error(res, { message: "Laporan tidak ditemukan", statusCode: 404 });
 
-    return success(res, { message: "Detail laporan berhasil diambil", data: report });
+    const data = {
+      ...report,
+      images: (report.images ?? []).map((image) =>
+        typeof image === "string" ? image : image.url
+      ),
+    };
+
+    return success(res, { message: "Detail laporan berhasil diambil", data });
   } catch (err) {
     next(err);
   }
@@ -221,121 +226,237 @@ export const getReportSummary = async (req, res, next) => {
 
 // POST /api/reports
 export const createReport = async (req, res, next) => {
-  const images = toImagePaths(req.files);
+  const uploadedImages = [];
+
   try {
     const body = req.body ?? {};
     const { title, description, type, severity } = body;
-    const payload = {
-      title,
-      description,
-      address: typeof body.address === "string" ? body.address.trim() : "",
-      type,
-      severity,
-      images,
-    };
 
-    // Lokasi dikirim dari FE (latitude dan longitude) dan wajib ada, karena dipakai untuk peta dan rute.
+    // Validasi lokasi sebelum upload agar tidak mengunggah gambar sia-sia.
     const location = buildLocation(body);
+
     if (!location) {
-      await removeFiles(images);
       return error(res, {
         message:
-          location === null
-            ? "Latitude dan longitude wajib diisi (angka)"
-            : "Koordinat tidak valid",
+          "Latitude dan longitude wajib diisi dan harus berupa koordinat yang valid",
         statusCode: 422,
       });
     }
-    payload.location = location;
 
-    // Alamat opsional: jika FE tidak mengirim address, isi otomatis dari koordinat (reverse geocoding OSM).
+    // Upload gambar ke Cloudinary.
+    for (const file of req.files ?? []) {
+      const image = await uploadImage(file, "reports");
+      uploadedImages.push(image);
+    }
+
+    const payload = {
+      title,
+      description,
+      address:
+        typeof body.address === "string"
+          ? body.address.trim()
+          : "",
+      type,
+      severity,
+      images: uploadedImages,
+      location,
+    };
+
+    // Isi alamat dan wilayah berdasarkan koordinat.
     const [lng, lat] = location.coordinates;
-    const { address: geoAddress, ...regions } = await resolveLocation(lat, lng);
+    const { address: geoAddress, ...regions } =
+      await resolveLocation(lat, lng);
+
     Object.assign(payload, regions);
-    if (!payload.address) payload.address = geoAddress;
+
+    if (!payload.address) {
+      payload.address = geoAddress;
+    }
 
     const report = await Report.create(payload);
-    return created(res, { message: "Laporan berhasil dibuat", data: report });
+
+    return created(res, {
+      message: "Laporan berhasil dibuat",
+      data: report,
+    });
   } catch (err) {
-    await removeFiles(images); // bersihkan file jika gagal simpan
-    next(err);
+    // Hapus gambar yang sudah terunggah jika proses pembuatan gagal.
+    if (uploadedImages.length > 0) {
+      try {
+        await deleteImages(uploadedImages);
+      } catch (cleanupError) {
+        console.error(
+          "Gagal membersihkan gambar Cloudinary:",
+          cleanupError.message,
+        );
+      }
+    }
+
+    return next(err);
   }
 };
 
 // PUT /api/reports/:id
 // Body opsional: removeImages (nama file atau path gambar lama yang ingin dihapus)
 export const updateReport = async (req, res, next) => {
-  const newImages = toImagePaths(req.files);
+  const uploadedImages = [];
+
   try {
     const { id } = req.params;
+
     if (!mongoose.isValidObjectId(id)) {
-      await removeFiles(newImages);
-      return error(res, { message: "ID laporan tidak valid", statusCode: 400 });
-    }
-
-    const report = await Report.findById(id);
-    if (!report) {
-      await removeFiles(newImages);
-      return error(res, { message: "Laporan tidak ditemukan", statusCode: 404 });
-    }
-
-    if (!canManage(req.user, report)) {
-      await removeFiles(newImages);
-      return error(res, { message: "Anda tidak berhak mengubah laporan ini", statusCode: 403 });
-    }
-
-    const body = req.body ?? {};
-
-    // Status "selesai" hanya boleh lewat progres perbaikan (wajib ada foto bukti), lihat progress.controller.js
-    if (body.status === "selesai" && report.status !== "selesai" && STAFF_ROLES.includes(req.user.role)) {
-      await removeFiles(newImages);
       return error(res, {
-        message: "Status selesai diatur otomatis saat progres perbaikan berstatus selesai (dengan foto bukti)",
+        message: "ID laporan tidak valid",
         statusCode: 400,
       });
     }
 
-    // Tentukan gambar lama yang dihapus
-    let removeList = body.removeImages || [];
-    if (!Array.isArray(removeList)) removeList = [removeList];
-    const removeNames = removeList.map((p) => path.basename(p));
-    const toRemove = report.images.filter((p) => removeNames.includes(path.basename(p)));
-    const remaining = report.images.filter((p) => !toRemove.includes(p));
+    const report = await Report.findById(id);
 
-    if (remaining.length + newImages.length > MAX_IMAGES) {
-      await removeFiles(newImages);
-      return error(res, { message: `Total gambar maksimal ${MAX_IMAGES}`, statusCode: 400 });
+    if (!report) {
+      return error(res, {
+        message: "Laporan tidak ditemukan",
+        statusCode: 404,
+      });
     }
 
-    const fields = ["title", "description", "address", "type", "severity"];
-    if (STAFF_ROLES.includes(req.user.role)) fields.push("status");
-    fields.forEach((f) => {
-      if (body[f] !== undefined) report[f] = body[f];
+    if (!canManage(req.user, report)) {
+      return error(res, {
+        message: "Anda tidak berhak mengubah laporan ini",
+        statusCode: 403,
+      });
+    }
+
+    const body = req.body ?? {};
+
+    if (
+      body.status === "selesai" &&
+      report.status !== "selesai" &&
+      STAFF_ROLES.includes(req.user.role)
+    ) {
+      return error(res, {
+        message:
+          "Status selesai diatur otomatis saat progres perbaikan berstatus selesai (dengan foto bukti)",
+        statusCode: 400,
+      });
+    }
+
+    // Tentukan gambar lama yang ingin dihapus berdasarkan public_id.
+    let removeList = body.removeImages || [];
+
+    if (!Array.isArray(removeList)) {
+      removeList = [removeList];
+    }
+
+    const currentImages = report.images ?? [];
+
+    const toRemove = currentImages.filter(
+      (image) =>
+        image?.public_id && removeList.includes(image.public_id),
+    );
+
+    const remaining = currentImages.filter(
+      (image) => !toRemove.includes(image),
+    );
+
+    const files = req.files ?? [];
+
+    if (remaining.length + files.length > MAX_IMAGES) {
+      return error(res, {
+        message: `Total gambar maksimal ${MAX_IMAGES}`,
+        statusCode: 400,
+      });
+    }
+
+    const fields = [
+      "title",
+      "description",
+      "address",
+      "type",
+      "severity",
+    ];
+
+    if (STAFF_ROLES.includes(req.user.role)) {
+      fields.push("status");
+    }
+
+    fields.forEach((field) => {
+      if (body[field] !== undefined) {
+        report[field] = body[field];
+      }
     });
 
-    if (body.latitude !== undefined || body.longitude !== undefined) {
+    if (
+      body.latitude !== undefined ||
+      body.longitude !== undefined
+    ) {
       const location = buildLocation(body);
+
       if (!location) {
-        await removeFiles(newImages);
-        return error(res, { message: "Koordinat tidak valid", statusCode: 422 });
+        return error(res, {
+          message: "Koordinat tidak valid",
+          statusCode: 422,
+        });
       }
+
       report.location = location;
 
-      // Lokasi berubah dan address tidak ikut dikirim: perbarui alamat dari koordinat baru.
       const [lng, lat] = location.coordinates;
-      const { address: geoAddress, ...regions } = await resolveLocation(lat, lng);
+      const { address: geoAddress, ...regions } =
+        await resolveLocation(lat, lng);
+
       report.set(regions);
-      const addressSent = typeof body.address === "string" && body.address.trim() !== "";
-      if (!addressSent) report.address = geoAddress;
+
+      const addressSent =
+        typeof body.address === "string" &&
+        body.address.trim() !== "";
+
+      if (!addressSent) {
+        report.address = geoAddress;
+      }
     }
 
-    report.images = [...remaining, ...newImages];
-    await report.save();
-    await removeFiles(toRemove); // hapus file lama setelah data tersimpan
+    // Upload gambar baru ke Cloudinary.
+    for (const file of files) {
+      const image = await uploadImage(file, "reports");
+      uploadedImages.push(image);
+    }
 
-    return success(res, { message: "Laporan berhasil diperbarui", data: report });
+    report.images = [...remaining, ...uploadedImages];
+
+    // Simpan perubahan sebelum menghapus gambar lama.
+    await report.save();
+
+    // Gambar lama dihapus setelah perubahan database berhasil.
+    // Kegagalan menghapus gambar lama tidak membatalkan update.
+    if (toRemove.length > 0) {
+      try {
+        await deleteImages(toRemove);
+      } catch (deleteError) {
+        console.error(
+          "Gagal menghapus gambar lama dari Cloudinary:",
+          deleteError.message,
+        );
+      }
+    }
+
+    return success(res, {
+      message: "Laporan berhasil diperbarui",
+      data: report,
+    });
   } catch (err) {
-    await removeFiles(newImages);
+    // Bersihkan gambar baru jika upload atau penyimpanan gagal.
+    if (uploadedImages.length > 0) {
+      try {
+        await deleteImages(uploadedImages);
+      } catch (cleanupError) {
+        console.error(
+          "Gagal membersihkan gambar baru dari Cloudinary:",
+          cleanupError.message,
+        );
+      }
+    }
+
     next(err);
   }
 };
