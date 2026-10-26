@@ -5,47 +5,76 @@ import { blockingSeverities, passableBy } from "../utils/vehicle.js";
 
 const num = (v, fallback) => {
   if (v === undefined || v === "") return fallback;
+
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 };
 
 const CFG = {
-  // Status laporan yang dianggap "sedang merusak jalan": dihindari rute DAN ditampilkan di peta (getHazards).
-  // Default hanya "diproses". Bisa diubah lewat .env, contoh: ROUTING_BLOCK_STATUSES=diverifikasi,diproses
   statuses: (process.env.ROUTING_BLOCK_STATUSES || "diproses")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
-  // Rute dianggap "melewati" laporan jika jaraknya <= nilai ini (meter).
+
   bufferM: num(process.env.ROUTING_BUFFER_METERS, 40),
-  // Seberapa jauh titik belok (via) digeser dari lokasi kerusakan (meter).
   detourM: num(process.env.ROUTING_DETOUR_METERS, 400),
-  // Maksimum percobaan pengalihan berurutan.
   maxIter: num(process.env.ROUTING_MAX_ITER, 3),
-  // Penalti waktu (detik) per bobot kerusakan. ringan=1, sedang=3, berat=10.
   penaltySec: num(process.env.ROUTING_PENALTY_SEC, 120),
-  // Rute pengalihan ditolak jika lebih lama dari faktor ini x rute tercepat.
   maxDetourFactor: num(process.env.ROUTING_MAX_DETOUR_FACTOR, 2),
 };
 
-const WEIGHT = { ringan: 1, sedang: 3, berat: 10 };
-const VEHICLE_LABEL = { mobil: "mobil", motor: "motor", jalan_kaki: "pejalan kaki" };
+const WEIGHT = {
+  ringan: 1,
+  sedang: 3,
+  berat: 10,
+};
 
-// Semua laporan aktif yang berada di dekat garis rute (apa pun tingkat kerusakannya).
+const VEHICLE_LABEL = {
+  mobil: "mobil",
+  motor: "motor",
+  jalan_kaki: "pejalan kaki",
+};
+
+// Mengubah format gambar menjadi URL string.
+// Cloudinary sudah menyediakan URL lengkap, jadi tidak perlu BASE_URL.
+const normalizeImages = (images = []) =>
+  images
+    .map((image) => {
+      if (typeof image === "string") {
+        return image;
+      }
+
+      if (image && typeof image === "object") {
+        return image.url ?? null;
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+
+// Semua laporan aktif yang berada di dekat garis rute.
 const findNearbyReports = async (coords) => {
   const candidates = await Report.find({
     status: { $in: CFG.statuses },
     type: "jalan",
-    location: { $geoWithin: { $geometry: bboxPolygon(coords, CFG.bufferM * 2) } },
+    location: {
+      $geoWithin: {
+        $geometry: bboxPolygon(coords, CFG.bufferM * 2),
+      },
+    },
   })
     .select("title type severity status address location images")
     .lean();
 
   const found = [];
+
   for (const r of candidates) {
     const [lng, lat] = r.location.coordinates;
+
     const near = nearestOnLine([lng, lat], coords);
+
     if (near.distance > CFG.bufferM) continue;
+
     found.push({
       id: r._id.toString(),
       title: r.title,
@@ -53,50 +82,70 @@ const findNearbyReports = async (coords) => {
       type: r.type,
       severity: r.severity,
       status: r.status,
-      images: (r.images || []).map((p) => `${process.env.BASE_URL}/${p}`),
+
+      // Ambil URL Cloudinary, bukan menggabungkan objek dengan BASE_URL.
+      images: normalizeImages(r.images),
+
       lat,
       lng,
       distanceToRoute: Math.round(near.distance),
       weight: WEIGHT[r.severity] ?? 1,
-      position: near.index, // urutan sepanjang rute
+      position: near.index,
     });
   }
+
   return found.sort((a, b) => a.position - b.position);
 };
 
-// Titik via kadang menempel ke jalan buntu sehingga rute masuk lalu keluar lewat jalan yang sama
-// (lorong buntu yang tampak seperti "ekor" di peta). Bagian itu dibuang dari rute; jarak dan
-// durasi dikurangi sebanding dengan panjang yang dibuang.
+// Menghapus bagian rute yang membentuk jalan buntu di titik via.
 const trimSpurs = (route, vias) => {
   if (vias.length === 0) return route;
-  // pakai lokasi via setelah di-snap OSRM bila tersedia (waypoints: asal, via..., tujuan)
+
   const snapped =
     route.waypoints?.length === vias.length + 2
       ? route.waypoints.slice(1, -1).map((w) => w.location)
       : vias;
 
-  const { line, removedMeters } = removeLoopsAtVias(route.geometry.coordinates, snapped);
+  const { line, removedMeters } = removeLoopsAtVias(
+    route.geometry.coordinates,
+    snapped
+  );
+
   if (removedMeters === 0) return route;
 
   const ratio = Math.max(0, 1 - removedMeters / route.distance);
+
   return {
     ...route,
     distance: route.distance - removedMeters,
     duration: route.duration * ratio,
-    geometry: { type: "LineString", coordinates: line },
+    geometry: {
+      type: "LineString",
+      coordinates: line,
+    },
   };
 };
 
-// `blocking` = tingkat kerusakan yang menghalangi kendaraan ini.
-// hazards  = kerusakan yang menghalangi (dihindari dan dihitung di skor)
-// passable = kerusakan di rute yang masih bisa dilewati kendaraan ini (hanya informasi)
+// Menilai rute berdasarkan laporan yang menghalangi dan yang masih bisa dilewati.
 const evaluate = async (rawRoute, blocking, vias = []) => {
   const route = trimSpurs(rawRoute, vias);
   const coords = route.geometry.coordinates;
+
   const nearby = await findNearbyReports(coords);
-  const hazards = nearby.filter((h) => blocking.includes(h.severity));
-  const passable = nearby.filter((h) => !blocking.includes(h.severity));
-  const hazardScore = hazards.reduce((sum, h) => sum + h.weight, 0);
+
+  const hazards = nearby.filter((h) =>
+    blocking.includes(h.severity)
+  );
+
+  const passable = nearby.filter(
+    (h) => !blocking.includes(h.severity)
+  );
+
+  const hazardScore = hazards.reduce(
+    (sum, h) => sum + h.weight,
+    0
+  );
+
   return {
     distance: route.distance,
     duration: route.duration,
@@ -110,11 +159,19 @@ const evaluate = async (rawRoute, blocking, vias = []) => {
   };
 };
 
-const pickBest = (list) => list.reduce((a, b) => (b.cost < a.cost ? b : a));
+const pickBest = (list) =>
+  list.reduce((a, b) => (b.cost < a.cost ? b : a));
 
-const strip = ({ position, weight, ...h }) => h;
+const strip = ({ position, weight, ...hazard }) => hazard;
 
-const publicRoute = ({ distance, duration, geometry, hazards, passable }) => ({
+// Mengubah hasil evaluasi menjadi struktur respons API.
+const publicRoute = ({
+  distance,
+  duration,
+  geometry,
+  hazards,
+  passable,
+}) => ({
   distance: Math.round(distance),
   duration: Math.round(duration),
   geometry,
@@ -125,73 +182,127 @@ const publicRoute = ({ distance, duration, geometry, hazards, passable }) => ({
 /**
  * Cari rute dari origin ke destination yang menghindari laporan jalan rusak.
  *
- * @param {{lat:number,lng:number}} origin
- * @param {{lat:number,lng:number}} destination
- * @param {"mobil"|"motor"|"jalan_kaki"} vehicle kendaraan; menentukan profil OSRM dan
- *   tingkat kerusakan yang dianggap menghalangi (kerusakan ringan masih bisa dilewati motor dan pejalan kaki).
- *
- * Strategi (OSRM tidak bisa "memblokir" titik arbitrer, jadi kita pakai waypoint):
- *  1. Ambil rute tercepat + alternatifnya dari OSRM.
- *  2. Nilai tiap rute: cari laporan aktif dalam radius `bufferM` dari garis rute.
- *     cost = durasi + (total bobot kerusakan yang menghalangi x penalti).
- *  3. Jika rute terbaik masih melewati kerusakan, paksa rute melambung lewat titik via
- *     yang digeser tegak lurus dari lokasi kerusakan (kiri & kanan), nilai ulang,
- *     ulangi sampai `maxIter` kali atau tidak ada perbaikan lagi.
+ * Strategi:
+ * 1. Ambil rute tercepat dan alternatif dari OSRM.
+ * 2. Nilai laporan kerusakan yang berada dekat setiap rute.
+ * 3. Coba mengalihkan rute melalui titik via di sekitar kerusakan.
+ * 4. Pilih rute dengan biaya terendah selama durasinya masih wajar.
  */
-export const findSafeRoute = async (origin, destination, vehicle = "mobil") => {
+export const findSafeRoute = async (
+  origin,
+  destination,
+  vehicle = "mobil"
+) => {
   const A = [origin.lng, origin.lat];
   const B = [destination.lng, destination.lat];
+
   const blocking = blockingSeverities(vehicle, SEVERITY);
   const label = VEHICLE_LABEL[vehicle];
 
-  const osrmRoutes = await fetchRoutes([A, B], { alternatives: true, vehicle });
-  const candidates = await Promise.all(osrmRoutes.map((r) => evaluate(r, blocking)));
+  const osrmRoutes = await fetchRoutes([A, B], {
+    alternatives: true,
+    vehicle,
+  });
 
-  const baseline = candidates[0]; // rute tercepat murni
-  const maxDuration = Math.max(baseline.duration * CFG.maxDetourFactor, baseline.duration + 600);
+  const candidates = await Promise.all(
+    osrmRoutes.map((route) => evaluate(route, blocking))
+  );
+
+  const baseline = candidates[0];
+
+  const maxDuration = Math.max(
+    baseline.duration * CFG.maxDetourFactor,
+    baseline.duration + 600
+  );
+
   let best = pickBest(candidates);
   const tried = new Set();
 
-  for (let i = 0; i < CFG.maxIter && best.hazards.length > 0; i++) {
+  for (
+    let i = 0;
+    i < CFG.maxIter && best.hazards.length > 0;
+    i++
+  ) {
     const target = [...best.hazards]
-      .filter((h) => !tried.has(h.id))
+      .filter((hazard) => !tried.has(hazard.id))
       .sort((a, b) => b.weight - a.weight)[0];
+
     if (!target) break;
+
     tried.add(target.id);
 
-    const near = nearestOnLine([target.lng, target.lat], best.coords);
+    const near = nearestOnLine(
+      [target.lng, target.lat],
+      best.coords
+    );
+
     const attempts = await Promise.allSettled(
       [1, -1].map(async (side) => {
-        const via = offsetPerpendicular(near.point, near.direction, CFG.detourM, side);
+        const via = offsetPerpendicular(
+          near.point,
+          near.direction,
+          CFG.detourM,
+          side
+        );
+
         const vias = [...best.vias, via]
-          .map((v) => ({ v, pos: nearestOnLine(v, best.coords).index }))
+          .map((v) => ({
+            v,
+            pos: nearestOnLine(v, best.coords).index,
+          }))
           .sort((a, b) => a.pos - b.pos)
-          .map((x) => x.v);
-        const [route] = await fetchRoutes([A, ...vias, B], { vehicle });
+          .map((item) => item.v);
+
+        const [route] = await fetchRoutes(
+          [A, ...vias, B],
+          { vehicle }
+        );
+
         return evaluate(route, blocking, vias);
       })
     );
 
-    // Kegagalan satu percobaan tidak menghentikan pencarian, tetapi dicatat agar mudah ditelusuri.
-    attempts.forEach((a) => {
-      if (a.status === "rejected") console.warn("[safeRoute] percobaan pengalihan gagal:", a.reason?.message);
+    attempts.forEach((attempt) => {
+      if (attempt.status === "rejected") {
+        console.warn(
+          "[safeRoute] percobaan pengalihan gagal:",
+          attempt.reason?.message
+        );
+      }
     });
 
     const valid = attempts
-      .filter((a) => a.status === "fulfilled" && a.value.duration <= maxDuration)
-      .map((a) => a.value);
+      .filter(
+        (attempt) =>
+          attempt.status === "fulfilled" &&
+          attempt.value.duration <= maxDuration
+      )
+      .map((attempt) => attempt.value);
+
     if (valid.length === 0) continue;
 
     const candidate = pickBest(valid);
-    if (candidate.cost < best.cost) best = candidate;
+
+    if (candidate.cost < best.cost) {
+      best = candidate;
+    }
   }
 
-  const bestIds = new Set(best.hazards.map((h) => h.id));
-  const avoided = baseline.hazards.filter((h) => !bestIds.has(h.id));
+  const bestIds = new Set(
+    best.hazards.map((hazard) => hazard.id)
+  );
+
+  const avoided = baseline.hazards.filter(
+    (hazard) => !bestIds.has(hazard.id)
+  );
 
   let status;
   let message;
-  if (best.hazards.length === 0 && baseline.hazards.length === 0) {
+
+  if (
+    best.hazards.length === 0 &&
+    baseline.hazards.length === 0
+  ) {
     status = "aman";
     message = `Rute tercepat tidak melewati jalan rusak yang menghalangi ${label}`;
   } else if (best.hazards.length === 0) {
@@ -202,8 +313,10 @@ export const findSafeRoute = async (origin, destination, vehicle = "mobil") => {
     message = `Rute dialihkan menghindari ${avoided.length} titik, tetapi masih melewati ${best.hazards.length} titik jalan rusak`;
   } else {
     status = "tidak_terhindarkan";
-    message = "Tidak ditemukan jalur alternatif yang wajar; rute masih melewati jalan rusak";
+    message =
+      "Tidak ditemukan jalur alternatif yang wajar; rute masih melewati jalan rusak";
   }
+
   if (best.passable.length > 0) {
     message += `. Ada ${best.passable.length} titik jalan rusak di rute yang masih bisa dilewati ${label}`;
   }
@@ -212,6 +325,9 @@ export const findSafeRoute = async (origin, destination, vehicle = "mobil") => {
     status,
     message,
     vehicle,
+
+    // Gambar sudah dinormalisasi saat findNearbyReports().
+    // publicRoute() mempertahankan URL tersebut.
     route: publicRoute(best),
     baseline: publicRoute(baseline),
     avoided: avoided.map(strip),
