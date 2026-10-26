@@ -256,9 +256,11 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
         address: r.address,
         severity: r.severity,
         status: r.status,
-        images: (r.images || []).map(
-          (p) => `${process.env.BASE_URL}/${p}`
-        ),
+        images: (r.images ?? [])
+          .map((image) =>
+            typeof image === "string" ? image : image?.url
+          )
+          .filter(Boolean),
         passableBy: passableBy(r.severity),
       },
     })),

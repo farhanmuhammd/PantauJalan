@@ -53,14 +53,39 @@ export const getSafeRoute = async (req, res, next) => {
 export const getHazards = async (req, res, next) => {
   try {
     let bbox;
+
     if (req.query.bbox) {
       bbox = String(req.query.bbox).split(",").map(Number);
+
       if (bbox.length !== 4 || bbox.some((n) => !Number.isFinite(n))) {
-        return error(res, { message: "bbox harus berformat minLng,minLat,maxLng,maxLat", statusCode: 422 });
+        return error(res, {
+          message: "bbox harus berformat minLng,minLat,maxLng,maxLat",
+          statusCode: 422,
+        });
       }
     }
-    const data = await getActiveHazardsGeoJSON(bbox);
-    return success(res, { message: "Titik jalan rusak berhasil diambil", data });
+
+    const geojson = await getActiveHazardsGeoJSON(bbox);
+
+    const data = {
+      ...geojson,
+      features: (geojson.features ?? []).map((feature) => ({
+        ...feature,
+        properties: {
+          ...feature.properties,
+          images: (feature.properties?.images ?? [])
+            .map((image) =>
+              typeof image === "string" ? image : image?.url
+            )
+            .filter(Boolean),
+        },
+      })),
+    };
+
+    return success(res, {
+      message: "Titik jalan rusak berhasil diambil",
+      data,
+    });
   } catch (err) {
     next(err);
   }
