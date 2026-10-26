@@ -102,20 +102,36 @@ export const getReports = async (req, res, next) => {
 export const getReportById = async (req, res, next) => {
   try {
     const { id } = req.params;
+
     if (!mongoose.isValidObjectId(id)) {
-      return error(res, { message: "ID laporan tidak valid", statusCode: 400 });
+      return error(res, {
+        message: "ID laporan tidak valid",
+        statusCode: 400,
+      });
     }
-    const report = await Report.findById(id);
-    if (!report) return error(res, { message: "Laporan tidak ditemukan", statusCode: 404 });
+
+    const report = await Report.findById(id).lean();
+
+    if (!report) {
+      return error(res, {
+        message: "Laporan tidak ditemukan",
+        statusCode: 404,
+      });
+    }
 
     const data = {
       ...report,
-      images: (report.images ?? []).map((image) =>
-        typeof image === "string" ? image : image.url
-      ),
+      images: (report.images ?? [])
+        .map((image) =>
+          typeof image === "string" ? image : image?.url
+        )
+        .filter(Boolean),
     };
 
-    return success(res, { message: "Detail laporan berhasil diambil", data });
+    return success(res, {
+      message: "Detail laporan berhasil diambil",
+      data,
+    });
   } catch (err) {
     next(err);
   }
