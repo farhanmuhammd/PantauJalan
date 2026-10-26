@@ -223,7 +223,7 @@ export const findSafeRoute = async (origin, destination, vehicle = "mobil") => {
 export const getActiveHazardsGeoJSON = async (bbox) => {
   const filter = {
     status: { $in: CFG.statuses },
-    type: "jalan",
+    // type: "jalan",
     "location.coordinates.0": { $exists: true },
   };
 
@@ -259,7 +259,7 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
         images: (r.images || []).map(
           (p) => `${process.env.BASE_URL}/${p}`
         ),
-        passableBy: passableBy(r.severity),
+        passableBy: r.type === "jalan" ? passableBy(r.severity) : null,
       },
     })),
   };
