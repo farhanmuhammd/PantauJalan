@@ -7,6 +7,7 @@ import {
     Popup,
     TileLayer,
     useMap,
+    useMapEvents,
 } from "react-leaflet";
 import type {
     Coordinates,
@@ -24,6 +25,9 @@ interface NavigationMapProps {
     origin: Coordinates | null;
     destination: Coordinates | null;
     onReroute: (position: Coordinates) => void;
+    pickTarget: "origin" | "destination" | null;
+    onPickLocation: (position: Coordinates) => void;
+    onCancelPick: () => void;
 }
 
 const defaultCenter: [number, number] = [3.5952, 98.6722];
@@ -220,6 +224,23 @@ function getDistanceToRoute(
     return minDistance;
 }
 
+function MapPicker({
+    active,
+    onPick,
+}: {
+    active: boolean;
+    onPick: (position: Coordinates) => void;
+}) {
+    useMapEvents({
+        click(event) {
+            if (!active) return;
+            onPick({ lat: event.latlng.lat, lng: event.latlng.lng });
+        },
+    });
+
+    return null;
+}
+
 export default function NavigationMap({
     route,
     baseline,
@@ -227,7 +248,10 @@ export default function NavigationMap({
     roadHazards,
     origin,
     destination,
-    onReroute
+    onReroute,
+    onPickLocation,
+    pickTarget,
+    onCancelPick,
 }: NavigationMapProps) {
     const routePoints = useMemo(() => toLatLngs(route), [route]);
     const baselinePoints = useMemo(() => toLatLngs(baseline), [baseline]);
@@ -360,19 +384,17 @@ export default function NavigationMap({
 
         const distance = getDistanceToRoute(currentPosition, routePoints);
 
-        console.log("[REROUTE] Posisi sekarang:", currentPosition);
-        console.log("[REROUTE] Jarak dari rute:", distance);
-
         if (distance > 50 && Date.now() - lastRerouteAt.current >= 5000) {
-            console.log("[REROUTE] Keluar jalur, memanggil API...");
-
             lastRerouteAt.current = Date.now();
             onReroute(currentPosition);
         }
     }, [isNavigating, currentPosition, routePoints, onReroute]);
 
     return (
-        <div className="relative z-10 h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-[540px] lg:h-[calc(100vh-190px)] lg:min-h-[560px]">
+        <div
+            className={`relative z-10 h-[420px] ... ${pickTarget ? "[&_.leaflet-grab]:!cursor-crosshair [&_.leaflet-interactive]:!cursor-crosshair" : ""
+                }`}
+        >
             <MapContainer
                 center={defaultCenter}
                 zoom={13}
@@ -394,6 +416,8 @@ export default function NavigationMap({
                     position={currentPosition}
                     active={isNavigating}
                 />
+
+                <MapPicker active={pickTarget !== null} onPick={onPickLocation} />
 
                 {baselinePoints.length > 1 && (
                     <Polyline
@@ -469,18 +493,78 @@ export default function NavigationMap({
                             position={[hazard.lat, hazard.lng]}
                             icon={createHazardIcon(color)}
                         >
-                            <Popup>
-                                <div className="min-w-36">
-                                    <p className="font-semibold">{hazard.title}</p>
-                                    <p className="mt-1 text-sm">{hazard.address}</p>
-                                    <p className="mt-1 text-sm">
-                                        Tingkat: {hazard.severity}
-                                    </p>
-                                    {hazard.status && (
-                                        <p className="text-sm">
-                                            Status: {hazard.status}
-                                        </p>
+                            <Popup minWidth={220} maxWidth={220} className="hazard-popup">
+                                <div className="w-[220px] overflow-hidden">
+                                    {hazard.images?.[0] && (
+                                        <img
+                                            src={hazard.images[0]}
+                                            alt={hazard.title}
+                                            loading="lazy"
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = "none";
+                                            }}
+                                            className="mb-3 h-28 w-full rounded-lg object-cover"
+                                        />
                                     )}
+
+                                    <h3 className="mb-2 text-sm font-semibold leading-snug text-slate-900">
+                                        {hazard.title}
+                                    </h3>
+
+                                    <p className="mb-3 text-xs leading-relaxed text-slate-600">
+                                        {hazard.address}
+                                    </p>
+
+                                    <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-xs text-slate-500">
+                                                Tingkat kerusakan
+                                            </span>
+
+                                            <span
+                                                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${hazard.severity === "berat"
+                                                        ? "bg-red-100 text-red-700"
+                                                        : hazard.severity === "sedang"
+                                                            ? "bg-amber-100 text-amber-700"
+                                                            : "bg-emerald-100 text-emerald-700"
+                                                    }`}
+                                            >
+                                                {hazard.severity === "berat"
+                                                    ? "Berat"
+                                                    : hazard.severity === "sedang"
+                                                        ? "Sedang"
+                                                        : "Ringan"}
+                                            </span>
+                                        </div>
+
+                                        {hazard.status && (
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs text-slate-500">
+                                                    Status laporan
+                                                </span>
+
+                                                <span
+                                                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${hazard.status === "diproses"
+                                                            ? "bg-blue-100 text-blue-700"
+                                                            : hazard.status === "diverifikasi"
+                                                                ? "bg-violet-100 text-violet-700"
+                                                                : hazard.status === "selesai"
+                                                                    ? "bg-emerald-100 text-emerald-700"
+                                                                    : "bg-slate-100 text-slate-700"
+                                                        }`}
+                                                >
+                                                    {hazard.status === "diproses"
+                                                        ? "Sedang diproses"
+                                                        : hazard.status === "diverifikasi"
+                                                            ? "Terverifikasi"
+                                                            : hazard.status === "selesai"
+                                                                ? "Selesai"
+                                                                : hazard.status.charAt(0).toUpperCase() +
+                                                                hazard.status.slice(1)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </Popup>
                         </Marker>
@@ -490,11 +574,27 @@ export default function NavigationMap({
                 <HazardMarkers hazards={roadHazards} />
             </MapContainer>
 
-            {route && (
+            {pickTarget && (
+                <div className="absolute left-4 right-4 top-4 z-[1000] flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-white p-3 shadow-lg sm:right-auto sm:max-w-sm">
+                    <p className="text-sm font-semibold text-slate-800">
+                        Ketuk peta untuk memilih{" "}
+                        {pickTarget === "origin" ? "lokasi awal" : "lokasi tujuan"}
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onCancelPick}
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                        Batal
+                    </button>
+                </div>
+            )}
+
+            {route && !pickTarget && (
                 <div className="absolute left-4 right-4 top-4 z-[1000] rounded-xl border border-slate-200 bg-white p-4 shadow-lg sm:left-auto sm:right-4 sm:w-72">
                     {isNavigating ? (
                         <>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
                                 Navigasi aktif
                             </p>
 
@@ -559,7 +659,7 @@ export default function NavigationMap({
                                     }
                                     setIsNavigating(true);
                                 }}
-                                className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                                className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
                             >
                                 Mulai navigasi
                             </button>
@@ -570,7 +670,7 @@ export default function NavigationMap({
 
             <div className="absolute bottom-4 left-4 z-[500] flex flex-wrap gap-x-4 gap-y-2 rounded-xl border border-white/70 bg-white/95 px-3 py-2.5 text-xs shadow-lg backdrop-blur">
                 <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-5 rounded-full bg-blue-600" />
+                    <span className="h-2.5 w-5 rounded-full bg-emerald-600" />
                     Rute aman
                 </span>
 
@@ -602,7 +702,7 @@ export default function NavigationMap({
                 </span>
 
                 <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
                     Lokasi tujuan
                 </span>
             </div>

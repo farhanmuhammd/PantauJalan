@@ -1,5 +1,5 @@
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
     ArrowRight,
@@ -22,7 +22,6 @@ import type {
     VehicleType,
 } from "./types/routes.types";
 import { getApiErrorMessage } from "../../../utils/api-error";
-import LocationPickerMap from "./components/LocationPickerMap";
 import { isInsideRegion, REGION } from "./config/region";
 import type { RoadHazardFeature } from "./types/hazards.types";
 import { getRoadHazards } from "./api/hazards.api";
@@ -101,7 +100,6 @@ export default function NavigasiPage() {
     const [locationError, setLocationError] = useState("");
     const [isGettingLocation, setIsGettingLocation] = useState(false);
     const [roadHazards, setRoadHazards] = useState<RoadHazardFeature[]>([]);
-    const [pickerInitialPosition, setPickerInitialPosition] = useState<Coordinates | null>(null);
     const [isRerouting, setIsRerouting] = useState(false);
 
 
@@ -249,46 +247,12 @@ export default function NavigasiPage() {
         );
     };
 
+    const mapRef = useRef<HTMLElement>(null);
+
     const handleOpenMapPicker = (target: "origin" | "destination") => {
-        const selectedLocation =
-            target === "origin" ? form.origin : form.destination;
-
-        // Prioritaskan lokasi yang sudah dipilih sebelumnya.
-        if (selectedLocation) {
-            setPickerInitialPosition({
-                lat: selectedLocation.lat,
-                lng: selectedLocation.lng,
-            });
-            setMapTarget(target);
-            return;
-        }
-
-        // Jika belum ada lokasi, coba ambil posisi GPS pengguna.
-        if (!navigator.geolocation) {
-            setPickerInitialPosition(null);
-            setMapTarget(target);
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            ({ coords }) => {
-                setPickerInitialPosition({
-                    lat: coords.latitude,
-                    lng: coords.longitude,
-                });
-                setMapTarget(target);
-            },
-            () => {
-                // GPS gagal atau ditolak: tetap buka peta.
-                setPickerInitialPosition(null);
-                setMapTarget(target);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 8000,
-                maximumAge: 30000,
-            },
-        );
+        setMapTarget(target);
+        // di mobile, peta ada di bawah form
+        mapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     };
 
     const handleReroute = async (position: Coordinates) => {
@@ -487,6 +451,9 @@ export default function NavigasiPage() {
                             origin={originCoordinates}
                             destination={destinationCoordinates}
                             onReroute={handleReroute}
+                            onPickLocation={handlePickFromMap}
+                            pickTarget={mapTarget}
+                            onCancelPick={() => setMapTarget(null)}
                         />
 
                         {isRerouting && (
@@ -533,14 +500,6 @@ export default function NavigasiPage() {
                     </section>
                 </div>
             </div>
-
-            {mapTarget && (
-                <LocationPickerMap
-                    initialPosition={pickerInitialPosition}
-                    onClose={() => setMapTarget(null)}
-                    onConfirm={handlePickFromMap}
-                />
-            )}
 
         </main>
     );

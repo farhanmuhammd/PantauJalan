@@ -20,6 +20,7 @@ export interface RouteHazard {
   lat: number;
   lng: number;
   distanceToRoute?: number;
+  images?: string | null;
 }
 
 export interface RouteGeometry {
