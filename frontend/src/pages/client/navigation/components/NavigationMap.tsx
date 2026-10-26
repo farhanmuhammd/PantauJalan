@@ -391,10 +391,7 @@ export default function NavigationMap({
     }, [isNavigating, currentPosition, routePoints, onReroute]);
 
     return (
-        <div
-            className={`relative z-10 h-[420px] ... ${pickTarget ? "[&_.leaflet-grab]:!cursor-crosshair [&_.leaflet-interactive]:!cursor-crosshair" : ""
-                }`}
-        >
+        <div className="relative z-10 h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-[540px] lg:h-[calc(100vh-250px)] lg:min-h-[560px]">
             <MapContainer
                 center={defaultCenter}
                 zoom={13}
@@ -523,10 +520,10 @@ export default function NavigationMap({
 
                                             <span
                                                 className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${hazard.severity === "berat"
-                                                        ? "bg-red-100 text-red-700"
-                                                        : hazard.severity === "sedang"
-                                                            ? "bg-amber-100 text-amber-700"
-                                                            : "bg-emerald-100 text-emerald-700"
+                                                    ? "bg-red-100 text-red-700"
+                                                    : hazard.severity === "sedang"
+                                                        ? "bg-amber-100 text-amber-700"
+                                                        : "bg-emerald-100 text-emerald-700"
                                                     }`}
                                             >
                                                 {hazard.severity === "berat"
@@ -545,12 +542,12 @@ export default function NavigationMap({
 
                                                 <span
                                                     className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${hazard.status === "diproses"
-                                                            ? "bg-blue-100 text-blue-700"
-                                                            : hazard.status === "diverifikasi"
-                                                                ? "bg-violet-100 text-violet-700"
-                                                                : hazard.status === "selesai"
-                                                                    ? "bg-emerald-100 text-emerald-700"
-                                                                    : "bg-slate-100 text-slate-700"
+                                                        ? "bg-blue-100 text-blue-700"
+                                                        : hazard.status === "diverifikasi"
+                                                            ? "bg-violet-100 text-violet-700"
+                                                            : hazard.status === "selesai"
+                                                                ? "bg-emerald-100 text-emerald-700"
+                                                                : "bg-slate-100 text-slate-700"
                                                         }`}
                                                 >
                                                     {hazard.status === "diproses"

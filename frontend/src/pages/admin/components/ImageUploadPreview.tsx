@@ -13,7 +13,6 @@ type ImageUploadPreviewProps = {
 export default function ImageUploadPreview({
     files,
     onChange,
-    existingImages = [],
     label,
     description = "JPG, PNG atau WEBP",
 }: ImageUploadPreviewProps) {
@@ -86,36 +85,6 @@ export default function ImageUploadPreview({
                     Pilih satu atau beberapa gambar dari perangkat
                 </span>
             </button>
-
-            {existingImages.length > 0 && (
-                <div className="space-y-2">
-                    <p className="text-xs font-semibold text-slate-500">
-                        Foto yang tersimpan
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        {existingImages.map((image, index) => (
-                            <a
-                                key={`${image}-${index}`}
-                                href={image}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
-                            >
-                                <img
-                                    src={image}
-                                    alt={`Foto tersimpan ${index + 1}`}
-                                    className="h-full w-full object-cover transition group-hover:scale-105"
-                                />
-
-                                <span className="absolute bottom-2 left-2 rounded-md bg-slate-950/65 px-2 py-1 text-[10px] font-medium text-white">
-                                    Foto tersimpan
-                                </span>
-                            </a>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {previews.length > 0 && (
                 <div className="space-y-2">

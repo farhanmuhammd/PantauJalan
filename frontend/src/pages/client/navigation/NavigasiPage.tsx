@@ -472,8 +472,7 @@ export default function NavigasiPage() {
                                         Rencanakan rute yang lebih aman
                                     </p>
                                     <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                        Cari lokasi awal dan tujuan, kemudian sistem akan
-                                        meminta backend menghitung rute berdasarkan data
+                                        Cari lokasi awal dan tujuan, kemudian sistem akan menghitung rute berdasarkan data
                                         kerusakan yang tersedia.
                                     </p>
                                 </div>

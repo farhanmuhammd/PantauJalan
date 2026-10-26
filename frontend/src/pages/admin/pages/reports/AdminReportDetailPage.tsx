@@ -128,6 +128,8 @@ export default function AdminReportDetailPage() {
   const [locationSuggestion, setLocationSuggestion] = useState<LocationSuggestion | null>(null);
   const [locationDisplayName, setLocationDisplayName] = useState("");
 
+  const [removeImages, setRemoveImages] = useState<string[]>([]);
+
   const loadProgress = useCallback(async () => {
     setLoadingProgress(true);
     try {
@@ -159,6 +161,7 @@ export default function AdminReportDetailPage() {
       images: [],
     });
 
+    setRemoveImages([]);
     setLocationSuggestion(null);
     setLocationDisplayName("");
     setEditingReport(true);
@@ -175,6 +178,7 @@ export default function AdminReportDetailPage() {
         ...reportForm,
         latitude: Number(reportForm.latitude),
         longitude: Number(reportForm.longitude),
+        removeImages,
       };
 
       await updateAdminReport(report._id, payload);
@@ -675,6 +679,72 @@ export default function AdminReportDetailPage() {
                       <MapPinned size={16} />
                       Pilih titik dari peta
                     </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(report.images ?? []).filter(
+                      (image) => !removeImages.includes(image),
+                    ).length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-slate-600">
+                            Foto lama
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            {(report.images ?? [])
+                              .filter((image) => !removeImages.includes(image))
+                              .map((image, index) => (
+                                <div
+                                  key={image}
+                                  className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+                                >
+                                  <a
+                                    href={image}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block"
+                                  >
+                                    <img
+                                      src={image}
+                                      alt={`Foto laporan ${index + 1}`}
+                                      className="h-32 w-full object-cover"
+                                    />
+                                  </a>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setRemoveImages((current) => [
+                                        ...current,
+                                        image,
+                                      ])
+                                    }
+                                    className="flex w-full items-center justify-center gap-2 border-t border-slate-100 px-3 py-2.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                  >
+                                    <Trash2 size={14} />
+                                    Hapus foto
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {removeImages.length > 0 && (
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                        <p className="text-xs text-amber-800">
+                          {removeImages.length} foto akan dihapus saat perubahan disimpan.
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => setRemoveImages([])}
+                          className="shrink-0 text-xs font-semibold text-amber-800 hover:text-amber-950"
+                        >
+                          Batalkan
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <ImageUploadPreview

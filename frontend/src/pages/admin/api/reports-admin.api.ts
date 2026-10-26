@@ -76,6 +76,7 @@ export type UpdateReportPayload = {
   type: string;
   longitude: number;
   images?: File[];
+  removeImages: string[];
 };
 
 export async function updateAdminReport(
@@ -91,6 +92,7 @@ export async function updateAdminReport(
   formData.append("latitude", String(payload.latitude));
   formData.append("longitude", String(payload.longitude));
   payload.images?.forEach((image) => formData.append("images", image));
+  formData.append("removeImages", JSON.stringify(payload.removeImages));
   const response = await api.put(`/reports/${reportId}`, formData);
   return response.data;
 }
