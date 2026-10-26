@@ -357,19 +357,69 @@ export const updateReport = async (req, res, next) => {
       });
     }
 
-    // Tentukan gambar lama yang ingin dihapus berdasarkan public_id.
-    let removeList = body.removeImages || [];
+    // Normalisasi removeImages agar menjadi array string URL/public_id.
+    const parseRemoveImages = (value) => {
+      if (value === undefined || value === null || value === "") {
+        return [];
+      }
 
-    if (!Array.isArray(removeList)) {
-      removeList = [removeList];
-    }
+      if (Array.isArray(value)) {
+        return value.flatMap((item) => parseRemoveImages(item));
+      }
+
+      if (typeof value !== "string") {
+        return [];
+      }
+
+      const trimmed = value.trim();
+
+      if (!trimmed) {
+        return [];
+      }
+
+      try {
+        const parsed = JSON.parse(trimmed);
+
+        // Hindari parsing berulang jika hasilnya sama.
+        if (parsed === value) {
+          return [trimmed];
+        }
+
+        if (Array.isArray(parsed)) {
+          return parsed.flatMap((item) => parseRemoveImages(item));
+        }
+
+        if (typeof parsed === "string") {
+          return parseRemoveImages(parsed);
+        }
+
+        return [];
+      } catch {
+        return [trimmed];
+      }
+    };
+
+    const removeList = [
+      ...new Set(parseRemoveImages(body.removeImages)),
+    ];
 
     const currentImages = report.images ?? [];
 
-    const toRemove = currentImages.filter(
-      (image) =>
-        image?.public_id && removeList.includes(image.public_id),
-    );
+    // Cari gambar lama yang dipilih untuk dihapus.
+    const toRemove = currentImages.filter((image) => {
+      if (!image) return false;
+
+      const publicId = image.public_id ?? "";
+      const url = image.url ?? image.secure_url ?? "";
+      const fileName = url.split("/").pop()?.split("?")[0] ?? "";
+
+      return removeList.some(
+        (item) =>
+          item === publicId ||
+          item === url ||
+          item === fileName,
+      );
+    });
 
     const remaining = currentImages.filter(
       (image) => !toRemove.includes(image),
@@ -377,6 +427,7 @@ export const updateReport = async (req, res, next) => {
 
     const files = req.files ?? [];
 
+    // Validasi jumlah gambar setelah penghapusan dan penambahan.
     if (remaining.length + files.length > MAX_IMAGES) {
       return error(res, {
         message: `Total gambar maksimal ${MAX_IMAGES}`,
@@ -402,6 +453,7 @@ export const updateReport = async (req, res, next) => {
       }
     });
 
+    // Perbarui koordinat dan informasi wilayah jika koordinat dikirim.
     if (
       body.latitude !== undefined ||
       body.longitude !== undefined
@@ -418,6 +470,7 @@ export const updateReport = async (req, res, next) => {
       report.location = location;
 
       const [lng, lat] = location.coordinates;
+
       const { address: geoAddress, ...regions } =
         await resolveLocation(lat, lng);
 
@@ -438,13 +491,12 @@ export const updateReport = async (req, res, next) => {
       uploadedImages.push(image);
     }
 
+    // Simpan gambar yang tersisa beserta gambar baru.
     report.images = [...remaining, ...uploadedImages];
 
-    // Simpan perubahan sebelum menghapus gambar lama.
     await report.save();
 
-    // Gambar lama dihapus setelah perubahan database berhasil.
-    // Kegagalan menghapus gambar lama tidak membatalkan update.
+    // Hapus gambar dari Cloudinary setelah database berhasil disimpan.
     if (toRemove.length > 0) {
       try {
         await deleteImages(toRemove);
@@ -461,7 +513,7 @@ export const updateReport = async (req, res, next) => {
       data: report,
     });
   } catch (err) {
-    // Bersihkan gambar baru jika upload atau penyimpanan gagal.
+    // Bersihkan gambar baru jika proses upload atau penyimpanan gagal.
     if (uploadedImages.length > 0) {
       try {
         await deleteImages(uploadedImages);
