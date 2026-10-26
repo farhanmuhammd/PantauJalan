@@ -65,14 +65,25 @@ const reportTypes = [
   { value: "lainnya", label: "Lainnya" },
 ] as const;
 
-const dateLabel = (value: string) =>
-  new Intl.DateTimeFormat("id-ID", {
+const dateLabel = (value: string | Date | null | undefined) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    console.warn("Tanggal tidak valid:", value);
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "long",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(date);
+};
+
 const initialProgress = {
   title: "",
   description: "",
