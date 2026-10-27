@@ -63,7 +63,7 @@ const findNearbyReports = async (coords) => {
       },
     },
   })
-    .select("title type severity status address location images")
+    .select("title type severity status address location images cost")
     .lean();
 
   const found = [];
@@ -82,6 +82,7 @@ const findNearbyReports = async (coords) => {
       type: r.type,
       severity: r.severity,
       status: r.status,
+      cost: r.cost,
 
       // Ambil URL Cloudinary, bukan menggabungkan objek dengan BASE_URL.
       images: normalizeImages(r.images),
@@ -356,7 +357,7 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
   }
 
   const reports = await Report.find(filter)
-    .select("title type severity status address location images")
+    .select("title type severity status address location images cost")
     .limit(1000)
     .lean();
 
@@ -372,6 +373,7 @@ export const getActiveHazardsGeoJSON = async (bbox) => {
         address: r.address,
         severity: r.severity,
         status: r.status,
+        cost: r.cost,
         images: (r.images ?? [])
           .map((image) =>
             typeof image === "string" ? image : image?.url

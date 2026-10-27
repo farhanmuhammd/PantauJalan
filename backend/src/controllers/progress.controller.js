@@ -164,6 +164,15 @@ export const createProgress = async (req, res, next) => {
 
     const body = req.body ?? {};
 
+    const cost = body.cost === undefined ? 0 : Number(body.cost);
+
+    if (!Number.isFinite(cost) || cost < 0) {
+      return error(res, {
+        message: "Biaya progres harus berupa angka dan tidak boleh negatif",
+        statusCode: 422,
+      });
+    }
+
     // Upload foto bukti ke Cloudinary.
     for (const file of files) {
       const image = await uploadFiles(file, "progress");
@@ -175,10 +184,17 @@ export const createProgress = async (req, res, next) => {
       title: body.title,
       description: body.description,
       status: body.status || undefined,
+      cost,
       images: uploadedImages,
       createdBy: req.user._id,
       createdByName: req.user.name,
     });
+
+    // Tambahkan biaya progress ke total biaya laporan.
+    await Report.updateOne(
+      { _id: report._id },
+      { $inc: { cost } },
+    );
 
     saved = true;
 
@@ -236,6 +252,23 @@ export const updateProgress = async (req, res, next) => {
     }
 
     const body = req.body ?? {};
+
+    let costDifference = 0;
+
+    if (body.cost !== undefined) {
+      const newCost = Number(body.cost);
+
+      if (!Number.isFinite(newCost) || newCost < 0) {
+        return error(res, {
+          message: "Biaya progres harus berupa angka dan tidak boleh negatif",
+          statusCode: 422,
+        });
+      }
+
+      costDifference = newCost - (item.cost ?? 0);
+      item.cost = newCost;
+    }
+
     const currentImages = item.images ?? [];
 
     // removeImages berisi public_id gambar Cloudinary.
@@ -289,6 +322,14 @@ export const updateProgress = async (req, res, next) => {
 
     await item.save();
     saved = true;
+
+    // Sesuaikan total biaya laporan berdasarkan selisih biaya.
+    if (costDifference !== 0) {
+      await Report.updateOne(
+        { _id: item.report },
+        { $inc: { cost: costDifference } },
+      );
+    }
 
     // Hapus foto lama setelah perubahan database berhasil.
     if (toRemove.length > 0) {

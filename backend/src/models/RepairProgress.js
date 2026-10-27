@@ -10,6 +10,7 @@ const repairProgressSchema = new mongoose.Schema(
     title: { type: String, required: [true, "Judul progres wajib diisi"], trim: true, maxlength: 150 },
     description: { type: String, trim: true, default: "" },
     status: { type: String, enum: PROGRESS_STATUS, default: "dikerjakan" },
+    cost: { type: Number, min: [0, "Total biaya tidak boleh negatif"], default: 0 },
     images: {
       type: [
         {

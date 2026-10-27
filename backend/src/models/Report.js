@@ -16,6 +16,7 @@ const reportSchema = new mongoose.Schema(
     type: { type: String, enum: REPORT_TYPES, default: "lainnya" },
     severity: { type: String, enum: SEVERITY, default: "ringan" },
     status: { type: String, enum: STATUS, default: "menunggu" },
+    cost: { type: Number, min: [0, "Total biaya tidak boleh negatif"], default: 0 },
     images: {
       type: [
         {
