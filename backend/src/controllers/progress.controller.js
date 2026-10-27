@@ -373,16 +373,34 @@ export const updateProgress = async (req, res, next) => {
 export const deleteProgress = async (req, res, next) => {
   try {
     const { id } = req.params;
+
     if (!mongoose.isValidObjectId(id)) {
-      return error(res, { message: "ID progres tidak valid", statusCode: 400 });
+      return error(res, {
+        message: "ID progres tidak valid",
+        statusCode: 400,
+      });
     }
+
     const item = await RepairProgress.findById(id);
-    if (!item) return error(res, { message: "Progres tidak ditemukan", statusCode: 404 });
+
+    if (!item) {
+      return error(res, {
+        message: "Progres tidak ditemukan",
+        statusCode: 404,
+      });
+    }
+
+    // Kurangi total biaya laporan sesuai biaya progres yang dihapus.
+    await Report.updateOne(
+      { _id: item.report },
+      { $inc: { cost: -(item.cost ?? 0) } },
+    );
 
     await item.deleteOne();
     await removeFiles(item.images);
 
     const reportStatus = await syncReportStatus(item.report);
+
     return success(res, {
       message: "Progres perbaikan berhasil dihapus",
       data: { reportStatus },
