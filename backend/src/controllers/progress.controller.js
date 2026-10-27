@@ -6,7 +6,7 @@ import { MAX_IMAGES } from "../middlewares/upload.js";
 import { syncReportStatus } from "../services/reportStatus.js";
 import { success, created, error } from "../utils/responseFormatter.js";
 import { removeFiles } from "../utils/file.js";
-import { deleteImages, uploadImage } from "../utils/cloudinaryUpload.js";
+import { deleteFiles, uploadFiles } from "../utils/cloudinaryUpload.js";
 
 const toImagePaths = (files = []) => files.map((f) => `uploads/progress/${f.filename}`);
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -166,7 +166,7 @@ export const createProgress = async (req, res, next) => {
 
     // Upload foto bukti ke Cloudinary.
     for (const file of files) {
-      const image = await uploadImage(file, "progress");
+      const image = await uploadFiles(file, "progress");
       uploadedImages.push(image);
     }
 
@@ -198,7 +198,7 @@ export const createProgress = async (req, res, next) => {
     // Jangan hapus foto yang sudah direferensikan oleh data tersimpan.
     if (!saved && uploadedImages.length > 0) {
       try {
-        await deleteImages(uploadedImages);
+        await deleteFiles(uploadedImages);
       } catch (cleanupError) {
         console.error(
           "Gagal membersihkan foto progres di Cloudinary:",
@@ -281,7 +281,7 @@ export const updateProgress = async (req, res, next) => {
 
     // Upload foto baru ke Cloudinary.
     for (const file of files) {
-      const image = await uploadImage(file, "progress");
+      const image = await uploadFiles(file, "progress");
       uploadedImages.push(image);
     }
 
@@ -293,7 +293,7 @@ export const updateProgress = async (req, res, next) => {
     // Hapus foto lama setelah perubahan database berhasil.
     if (toRemove.length > 0) {
       try {
-        await deleteImages(toRemove);
+        await deleteFiles(toRemove);
       } catch (deleteError) {
         console.error(
           "Gagal menghapus foto lama dari Cloudinary:",
@@ -315,7 +315,7 @@ export const updateProgress = async (req, res, next) => {
     // Hanya hapus foto baru jika belum tersimpan di database.
     if (!saved && uploadedImages.length > 0) {
       try {
-        await deleteImages(uploadedImages);
+        await deleteFiles(uploadedImages);
       } catch (cleanupError) {
         console.error(
           "Gagal membersihkan foto baru di Cloudinary:",

@@ -2,18 +2,37 @@ import multer from "multer";
 
 export const MAX_IMAGES = 5;
 
-const EXT_BY_MIME = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-};
+const ALLOWED_MIME_TYPES = [
+  // Gambar
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+
+  // Dokumen
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+  // Video
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+
+  // Audio
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/wav",
+  "audio/ogg",
+];
 
 const fileFilter = (_req, file, cb) => {
-  if (EXT_BY_MIME[file.mimetype]) {
+  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     return cb(null, true);
   }
 
-  cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", "images"));
+  cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
 };
 
 const createImageUploader = () =>

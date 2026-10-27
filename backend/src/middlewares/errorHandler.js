@@ -9,7 +9,7 @@ export const errorHandler = (err, _req, res, _next) => {
     const map = {
       LIMIT_FILE_SIZE: "Ukuran gambar maksimal 5 MB",
       LIMIT_FILE_COUNT: "Jumlah gambar maksimal 5",
-      LIMIT_UNEXPECTED_FILE: "File harus berupa gambar JPG, PNG, atau WEBP pada field images",
+      LIMIT_UNEXPECTED_FILE: "Jenis File tidak diperbolehkan. Hanya gambar, dokumen, video, dan audio yang diperbolehkan",
     };
     return error(res, { message: map[err.code] || err.message, statusCode: 400 });
   }

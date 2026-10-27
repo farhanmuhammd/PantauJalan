@@ -7,7 +7,7 @@ import { success, created, error } from "../utils/responseFormatter.js";
 import { getPagination, buildMeta } from "../utils/paginator.js";
 import { removeFiles } from "../utils/file.js";
 import { resolveLocation } from "../services/geoCode.js";
-import { deleteImages, uploadImage } from "../utils/cloudinaryUpload.js";
+import { deleteFiles, uploadFiles } from "../utils/cloudinaryUpload.js";
 
 const STAFF_ROLES = ["admin", "petugas"];
 const canManage = (user, report) =>
@@ -261,7 +261,7 @@ export const createReport = async (req, res, next) => {
 
     // Upload gambar ke Cloudinary.
     for (const file of req.files ?? []) {
-      const image = await uploadImage(file, "reports");
+      const image = await uploadFiles(file, "reports");
       uploadedImages.push(image);
     }
 
@@ -487,7 +487,7 @@ export const updateReport = async (req, res, next) => {
 
     // Upload gambar baru ke Cloudinary.
     for (const file of files) {
-      const image = await uploadImage(file, "reports");
+      const image = await uploadFiles(file, "reports");
       uploadedImages.push(image);
     }
 
@@ -499,7 +499,7 @@ export const updateReport = async (req, res, next) => {
     // Hapus gambar dari Cloudinary setelah database berhasil disimpan.
     if (toRemove.length > 0) {
       try {
-        await deleteImages(toRemove);
+        await deleteFiles(toRemove);
       } catch (deleteError) {
         console.error(
           "Gagal menghapus gambar lama dari Cloudinary:",
@@ -516,7 +516,7 @@ export const updateReport = async (req, res, next) => {
     // Bersihkan gambar baru jika proses upload atau penyimpanan gagal.
     if (uploadedImages.length > 0) {
       try {
-        await deleteImages(uploadedImages);
+        await deleteFiles(uploadedImages);
       } catch (cleanupError) {
         console.error(
           "Gagal membersihkan gambar baru dari Cloudinary:",

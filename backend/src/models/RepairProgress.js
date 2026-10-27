@@ -15,6 +15,13 @@ const repairProgressSchema = new mongoose.Schema(
         {
           url: { type: String, required: true },
           public_id: { type: String, required: true },
+          resource_type: {
+            type: String,
+            enum: ["image", "video", "raw"],
+            default: "image",
+          },
+          format: { type: String, default: null },
+          original_filename: { type: String, default: null },
         },
       ],
       default: [],
