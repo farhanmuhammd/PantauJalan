@@ -24,7 +24,11 @@ const ALLOWED_MIME_TYPES = [
   "audio/mpeg",
   "audio/mp4",
   "audio/wav",
+  "audio/x-wav",
   "audio/ogg",
+  "audio/webm",
+  "audio/aac",
+  "audio/3gpp",
 ];
 
 const fileFilter = (_req, file, cb) => {
@@ -32,7 +36,12 @@ const fileFilter = (_req, file, cb) => {
     return cb(null, true);
   }
 
-  cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
+  const error = new Error(
+    `Format file tidak didukung: ${file.mimetype}`,
+  );
+
+  error.statusCode = 400;
+  return cb(error);
 };
 
 const createImageUploader = () =>
