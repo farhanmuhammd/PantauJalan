@@ -61,6 +61,7 @@ export interface ReportItem {
   status: ReportStatus;
   type: string;
   images: ReportImage[];
+  cost: string;
   location: {
     type: "Point";
     coordinates: [number, number]; // [longitude, latitude]

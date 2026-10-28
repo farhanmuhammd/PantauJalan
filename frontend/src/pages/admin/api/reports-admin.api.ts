@@ -13,6 +13,7 @@ export type AdminProgress = {
   description: string;
   status: string;
   type: string;
+  cost: string;
   images: string[];
   createdBy?: string;
   createdByName?: string;
@@ -101,6 +102,7 @@ export type ProgressPayload = {
   title: string;
   description: string;
   status: string;
+  cost: string;
   images?: File[];
 };
 
@@ -112,6 +114,7 @@ export async function createAdminProgress(
   formData.append("title", payload.title);
   formData.append("description", payload.description);
   formData.append("status", payload.status);
+  formData.append("cost", payload.cost);
   payload.images?.forEach((image) => formData.append("images", image));
   const response = await api.post(`/reports/${reportId}/progress`, formData);
   return response.data;
@@ -125,6 +128,7 @@ export async function updateAdminProgress(
   formData.append("title", payload.title);
   formData.append("description", payload.description);
   formData.append("status", payload.status);
+  formData.append("cost", payload.cost);
   payload.images?.forEach((image) => formData.append("images", image));
   const response = await api.put(`/progress/${progressId}`, formData);
   return response.data;

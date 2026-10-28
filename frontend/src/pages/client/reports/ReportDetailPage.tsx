@@ -22,6 +22,7 @@ type ReportProgress = {
     title: string;
     description: string;
     status: string;
+    cost: string;
     images: string[];
     createdBy: string;
     createdByName: string;
@@ -67,6 +68,13 @@ function formatStatus(status: string) {
 
     return labels[status.toLowerCase()] ?? status;
 }
+
+const formatRupiah = (value: number | undefined) =>
+    new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    }).format(value ?? 0);
 
 function formatReportType(type: string) {
     return type
@@ -458,6 +466,15 @@ export default function ReportDetailPage() {
                                                 <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
                                                     {item.description}
                                                 </p>
+
+                                                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+                                                    <span className="text-xs font-medium text-slate-500">
+                                                        Biaya penanganan
+                                                    </span>
+                                                    <span className="text-sm font-bold text-slate-800">
+                                                        {formatRupiah(Number(item.cost ?? 0))}
+                                                    </span>
+                                                </div>
 
                                                 {item.images?.length > 0 && (
                                                     <div className="mt-4 grid grid-cols-2 gap-3">

@@ -84,10 +84,23 @@ const dateLabel = (value: string | Date | null | undefined) => {
   }).format(date);
 };
 
+const formatThousands = (value: string | number) => {
+  const digits = String(value).replace(/\D/g, "");
+  return digits ? Number(digits).toLocaleString("id-ID") : "";
+};
+
+const formatRupiah = (value: number | undefined) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value ?? 0);
+
 const initialProgress = {
   title: "",
   description: "",
   status: "dikerjakan",
+  cost: "",
   images: [] as File[],
 };
 
@@ -117,6 +130,7 @@ export default function AdminReportDetailPage() {
     severity: (initialReport?.severity ?? "sedang") as ReportSeverity,
     status: (initialReport?.status ?? "menunggu") as ReportStatus,
     type: initialReport?.type ?? "lainnya",
+    cost: initialReport?.cost,
     latitude: initialReport?.location.coordinates[1] ?? 0,
     longitude: initialReport?.location.coordinates[0] ?? 0,
     images: [] as File[],
@@ -156,6 +170,7 @@ export default function AdminReportDetailPage() {
       severity: report.severity,
       type: report.type ?? "lainnya",
       status: report.status,
+      cost: report.cost,
       latitude: report.location.coordinates[1],
       longitude: report.location.coordinates[0],
       images: [],
@@ -225,6 +240,7 @@ export default function AdminReportDetailPage() {
       title: item.title,
       description: item.description,
       status: item.status,
+      cost: formatThousands(item.cost ?? 0),
       images: [],
     });
     setProgressFormOpen(true);
@@ -238,10 +254,17 @@ export default function AdminReportDetailPage() {
     setError("");
     setMessage("");
     try {
-      const payload: ProgressPayload = progressForm;
+      const payload: ProgressPayload = {
+        ...progressForm,
+        cost: String(Number(progressForm.cost.replace(/\./g, ""))),
+      };
       if (editingProgressId)
         await updateAdminProgress(editingProgressId, payload);
       else await createAdminProgress(reportId, payload);
+
+      const updatedReport = await getAdminReportById(reportId);
+      setReport(updatedReport);
+
       setProgressFormOpen(false);
       setProgressForm(initialProgress);
       setEditingProgressId(null);
@@ -317,6 +340,9 @@ export default function AdminReportDetailPage() {
       setProgress((current) =>
         current.filter((progressItem) => progressItem._id !== item._id),
       );
+
+      const updatedReport = await getAdminReportById(reportId);
+      setReport(updatedReport);
 
       await Swal.fire({
         title: "Progres dihapus",
@@ -863,6 +889,14 @@ export default function AdminReportDetailPage() {
                       {report.description}
                     </p>
                   </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+                    <span className="text-xs font-medium text-slate-500">
+                      Biaya penanganan
+                    </span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {formatRupiah(Number(report?.cost ?? 0))}
+                    </span>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-slate-100 p-3">
                       <p className="text-xs text-slate-400">Tipe laporan</p>
@@ -992,6 +1026,42 @@ export default function AdminReportDetailPage() {
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
                 />
               </div>
+
+              <div className="mt-4">
+                <label
+                  htmlFor="progress-cost"
+                  className="mb-1.5 block text-sm font-semibold text-slate-700"
+                >
+                  Biaya penanganan
+                </label>
+
+                <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10">
+                  <span className="flex items-center border-r border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-500">
+                    Rp
+                  </span>
+
+                  <input
+                    id="progress-cost"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={progressForm.cost}
+                    onChange={(event) =>
+                      setProgressForm((current) => ({
+                        ...current,
+                        cost: formatThousands(event.target.value),
+                      }))
+                    }
+                    placeholder="0"
+                    className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm font-semibold text-slate-800 outline-none"
+                  />
+                </div>
+
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Masukkan biaya dalam Rupiah, tanpa tanda minus atau desimal.
+                </p>
+              </div>
+
               <ImageUploadPreview
                 label="Foto dokumentasi progres"
                 description="Unggah foto kondisi atau pekerjaan yang dilakukan"
@@ -1083,6 +1153,14 @@ export default function AdminReportDetailPage() {
                           </button>
                         </div>
 
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+                        <span className="text-xs font-medium text-slate-500">
+                          Biaya penanganan
+                        </span>
+                        <span className="text-sm font-bold text-slate-800">
+                          {formatRupiah(Number(item.cost ?? 0))}
+                        </span>
                       </div>
                       {item.images?.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
