@@ -78,8 +78,15 @@ function formatReportType(type: string) {
 
 function ReportCard({ report }: { report: ReportItem }) {
     const { t } = useTranslation();
-    const image = report.images?.[0];
+
     const navigate = useNavigate();
+
+    const firstImage = report.images?.[0];
+
+    const image =
+        firstImage?.resource_type === "image"
+            ? firstImage.url
+            : "/indonesia-city.jpg";
 
     return (
         <article
@@ -94,6 +101,10 @@ function ReportCard({ report }: { report: ReportItem }) {
                         src={image}
                         alt={report.title}
                         loading="lazy"
+                        onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = "/indonesia-city.jpg";
+                        }}
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                     />
                 ) : (

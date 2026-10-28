@@ -5,7 +5,6 @@ import { ImagePlus, Trash2, UploadCloud } from "lucide-react";
 type ImageUploadPreviewProps = {
     files: File[];
     onChange: (files: File[]) => void;
-    existingImages?: string[];
     label: string;
     description?: string;
 };

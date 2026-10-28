@@ -43,6 +43,15 @@ export type ReportStatus =
   | "selesai"
   | "ditolak";
 
+export interface ReportImage {
+  _id: string;
+  url: string;
+  public_id: string;
+  resource_type: string;
+  format: string;
+  original_filename: string;
+}
+
 export interface ReportItem {
   _id: string;
   title: string;
@@ -51,7 +60,7 @@ export interface ReportItem {
   severity: ReportSeverity;
   status: ReportStatus;
   type: string;
-  images: string[];
+  images: ReportImage[];
   location: {
     type: "Point";
     coordinates: [number, number]; // [longitude, latitude]

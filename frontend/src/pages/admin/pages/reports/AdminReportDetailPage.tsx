@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
-  FileImage,
   FileText,
   MapPin,
   MapPinned,
@@ -35,6 +34,7 @@ import ImageUploadPreview from "../../components/ImageUploadPreview";
 import Swal from "sweetalert2";
 import type { LocationSuggestion } from "../../../client/navigation/types/routes.types";
 import LocationSearch from "../../../client/navigation/components/LocationSearch";
+import { getReportImages } from "../../../../utils/get-default-image";
 
 const statuses: { value: ReportStatus; label: string }[] = [
   { value: "menunggu", label: "Menunggu" },
@@ -379,6 +379,12 @@ export default function AdminReportDetailPage() {
       </section>
     );
 
+  const existingImages = getReportImages(report.images).filter(
+    (image) =>
+      image.resource_type === "image" &&
+      !removeImages.includes(image.public_id ?? image.url),
+  );
+
   return (
     <>
       <div className="space-y-5">
@@ -462,30 +468,116 @@ export default function AdminReportDetailPage() {
               <h3 className="mb-3 text-sm font-bold text-slate-800">
                 Foto laporan
               </h3>
-              {report.images?.length ? (
+              {getReportImages(report.images).length > 0 ? (
                 <div className="grid grid-cols-2 gap-3">
-                  {report.images.map((image, index) => (
+                  {getReportImages(report.images).map((image, index) => (
                     <a
-                      key={`${image}-${index}`}
-                      href={image}
+                      key={image._id ?? image.public_id ?? `${image.url}-${index}`}
+                      href={image.url}
                       target="_blank"
                       rel="noreferrer"
                       className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50"
                     >
                       <img
-                        src={image}
+                        src={image.url}
                         alt={`Foto laporan ${index + 1}`}
+                        loading="lazy"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = "/indonesia-city.jpg";
+                        }}
                         className="h-36 w-full object-cover"
                       />
                     </a>
                   ))}
                 </div>
               ) : (
-                <div className="flex h-36 flex-col items-center justify-center gap-2 rounded-xl bg-slate-50 text-sm text-slate-400">
-                  <FileImage size={24} />
-                  Belum ada foto
+                <div className="grid grid-cols-2 gap-3">
+                  <img
+                    src={"/indonesia-city.jpg"}
+                    alt="Tidak ada foto laporan"
+                    className="h-36 w-full object-cover"
+                  />
                 </div>
               )}
+
+              {(() => {
+                const mediaFiles = (report.images ?? []).filter(
+                  (media) =>
+                    Boolean(media.url) &&
+                    media.resource_type !== "image",
+                );
+
+                const audioFormats = [
+                  "ogg",
+                  "mp3",
+                  "wav",
+                  "m4a",
+                  "aac",
+                  "opus",
+                  "weba",
+                  "mpeg",
+                  "webm"
+                ];
+
+                if (mediaFiles.length === 0) return null;
+
+                return (
+                  <div className="mt-6">
+                    <h3 className="mb-3 text-sm font-bold text-slate-800">
+                      Media laporan
+                    </h3>
+
+                    <div className="space-y-4">
+                      {mediaFiles.map((media, index) => {
+                        const format = media.format?.toLowerCase() ?? "";
+                        const isAudio = audioFormats.includes(format);
+
+                        return (
+                          <div
+                            key={media._id ?? media.public_id ?? media.url}
+                            className="rounded-xl border border-slate-200 bg-white p-4"
+                          >
+                            {isAudio ? (
+                              <>
+                                <p className="mb-3 text-sm font-semibold text-slate-800">
+                                  Rekaman suara {index + 1}
+                                </p>
+
+                                <audio
+                                  controls
+                                  preload="metadata"
+                                  className="w-full"
+                                >
+                                  <source src={media.url} />
+                                  Browser kamu tidak mendukung pemutar audio.
+                                </audio>
+                              </>
+                            ) : (
+                              <>
+                                <p className="mb-3 text-sm font-semibold text-slate-800">
+                                  Video laporan {index + 1}
+                                </p>
+
+                                <video
+                                  controls
+                                  preload="metadata"
+                                  playsInline
+                                  className="max-h-80 w-full rounded-lg bg-black"
+                                >
+                                  <source src={media.url} />
+                                  Browser kamu tidak mendukung pemutar video.
+                                </video>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="mt-4 rounded-xl bg-slate-50 p-4">
                 <div className="flex items-start gap-2 text-sm text-slate-600">
                   <MapPin
@@ -680,77 +772,55 @@ export default function AdminReportDetailPage() {
                       Pilih titik dari peta
                     </button>
                   </div>
+                  {existingImages.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-slate-600">
+                        Foto lama
+                      </p>
 
-                  <div className="space-y-3">
-                    {(report.images ?? []).filter(
-                      (image) => !removeImages.includes(image),
-                    ).length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-slate-600">
-                            Foto lama
-                          </p>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {existingImages.map((image, index) => {
+                          const imageId = image.public_id ?? image.url;
 
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {(report.images ?? [])
-                              .filter((image) => !removeImages.includes(image))
-                              .map((image, index) => (
-                                <div
-                                  key={image}
-                                  className="overflow-hidden rounded-xl border border-slate-200 bg-white"
-                                >
-                                  <a
-                                    href={image}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="block"
-                                  >
-                                    <img
-                                      src={image}
-                                      alt={`Foto laporan ${index + 1}`}
-                                      className="h-32 w-full object-cover"
-                                    />
-                                  </a>
+                          return (
+                            <div
+                              key={image._id ?? imageId}
+                              className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+                            >
+                              <a
+                                href={image.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block"
+                              >
+                                <img
+                                  src={image.url}
+                                  alt={`Foto laporan ${index + 1}`}
+                                  loading="lazy"
+                                  className="h-32 w-full object-cover"
+                                />
+                              </a>
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setRemoveImages((current) => [
-                                        ...current,
-                                        image,
-                                      ])
-                                    }
-                                    className="flex w-full items-center justify-center gap-2 border-t border-slate-100 px-3 py-2.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-                                  >
-                                    <Trash2 size={14} />
-                                    Hapus foto
-                                  </button>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-
-                    {removeImages.length > 0 && (
-                      <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-                        <p className="text-xs text-amber-800">
-                          {removeImages.length} foto akan dihapus saat perubahan disimpan.
-                        </p>
-
-                        <button
-                          type="button"
-                          onClick={() => setRemoveImages([])}
-                          className="shrink-0 text-xs font-semibold text-amber-800 hover:text-amber-950"
-                        >
-                          Batalkan
-                        </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRemoveImages((current) => [...current, imageId])
+                                }
+                                className="flex w-full items-center justify-center gap-2 border-t border-slate-100 px-3 py-2.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                              >
+                                <Trash2 size={14} />
+                                Hapus foto
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <ImageUploadPreview
                     label="Foto laporan"
                     description="JPG, PNG atau WEBP"
-                    existingImages={report.images ?? []}
                     files={reportForm.images}
                     onChange={(images) =>
                       setReportForm((current) => ({
@@ -925,11 +995,6 @@ export default function AdminReportDetailPage() {
               <ImageUploadPreview
                 label="Foto dokumentasi progres"
                 description="Unggah foto kondisi atau pekerjaan yang dilakukan"
-                existingImages={
-                  editingProgressId
-                    ? progress.find((item) => item._id === editingProgressId)?.images ?? []
-                    : []
-                }
                 files={progressForm.images}
                 onChange={(images) =>
                   setProgressForm((current) => ({

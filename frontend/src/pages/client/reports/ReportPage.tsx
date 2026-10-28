@@ -22,7 +22,6 @@ export default function ReportPage() {
         value: CreateReportPayload[K],
     ) => {
 
-        console.log("Field:", field, "Value:", value);
         setForm((current) => ({
             ...current,
             [field]: value,
@@ -99,10 +98,6 @@ export default function ReportPage() {
                 type: form.type,
                 images: form.images,
             };
-
-            console.log("Form type:", form.type);
-            console.log("Payload type:", payload.type);
-            console.log("Payload lengkap:", payload);
 
             const response = await createReport(payload);
 

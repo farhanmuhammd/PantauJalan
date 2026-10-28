@@ -7,7 +7,6 @@ import {
     CheckCircle2,
     Clock3,
     FileText,
-    Image as ImageIcon,
     MapPin,
     RefreshCw,
     UserRound,
@@ -15,6 +14,7 @@ import {
 import { getReportProgress } from "./api/reports.api";
 import type { ReportItem, ReportStatus } from "./types/reports.types";
 import { useLocation, useNavigate, useParams } from "react-router";
+import { getReportImages } from "../../../utils/get-default-image";
 
 type ReportProgress = {
     _id: string;
@@ -120,6 +120,8 @@ export default function ReportDetailPage() {
         ? error
         : "ID pengaduan tidak ditemukan.";
 
+    const reportImages = getReportImages(report?.images);
+
     useEffect(() => {
         if (!reportId) {
             return;
@@ -221,32 +223,40 @@ export default function ReportDetailPage() {
 
                         {report ? (
                             <div className="space-y-5">
-                                {report.images?.length ? (
+
+                                {reportImages.length > 0 ? (
                                     <div className="grid grid-cols-2 gap-3">
-                                        {report.images.map((image, index) => (
+                                        {reportImages.map((image, index) => (
                                             <a
-                                                key={`${image}-${index}`}
-                                                href={image}
+                                                key={image._id ?? `${image.public_id}-${index}`}
+                                                href={image.url}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="overflow-hidden rounded-xl bg-slate-100"
                                             >
                                                 <img
-                                                    src={image}
+                                                    src={image.url}
                                                     alt={`Foto pengaduan ${index + 1}`}
-                                                    className="h-36 w-full object-cover transition hover:scale-105"
+                                                    loading="lazy"
+                                                    onError={(e) => {
+                                                        e.currentTarget.onerror = null;
+                                                        e.currentTarget.src = "/indonesia-city.jpg";
+                                                    }}
+                                                    className="h-36 w-full object-cover transition duration-300 hover:scale-105"
                                                 />
                                             </a>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-xl bg-slate-50 text-slate-400">
-                                        <ImageIcon size={25} />
-                                        <p className="text-xs">
-                                            Tidak ada foto pengaduan
-                                        </p>
+                                    <div className="overflow-hidden rounded-xl bg-slate-100">
+                                        <img
+                                            src={"/indonesia-city.jpg"}
+                                            alt="Tidak ada foto pengaduan"
+                                            className="h-36 w-full object-cover"
+                                        />
                                     </div>
                                 )}
+
 
                                 <div>
                                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">

@@ -8,6 +8,7 @@ import {
     RefreshCw,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
+import type { ReportImage } from "../../../../client/reports/types/reports.types";
 
 type TodayReport = {
     _id: string;
@@ -17,7 +18,7 @@ type TodayReport = {
     severity: string;
     status: string;
     type: string;
-    images?: string[];
+    images?: ReportImage[];
     createdAt: string;
 };
 
@@ -187,10 +188,19 @@ export default function TodayReportsTable({
                                             <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                                                 {report.images?.[0] ? (
                                                     <img
-                                                        src={report.images[0]}
+                                                        src={
+                                                            report.images?.[0]?.resource_type === "image" &&
+                                                                report.images[0].url
+                                                                ? report.images[0].url
+                                                                : "/indonesia-city.jpg"
+                                                        }
                                                         alt={report.title}
                                                         className="h-full w-full object-cover"
                                                         loading="lazy"
+                                                        onError={(event) => {
+                                                            event.currentTarget.onerror = null;
+                                                            event.currentTarget.src = "/indonesia-city.jpg";
+                                                        }}
                                                     />
                                                 ) : (
                                                     <div className="flex h-full items-center justify-center text-slate-400">

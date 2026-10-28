@@ -240,12 +240,25 @@ export default function AdminReportListPage() {
                       <div className="flex min-w-[250px] items-center gap-3">
                         <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                           {report.images?.[0] ? (
-                            <img
-                              src={report.images[0]}
-                              alt={report.title}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
+
+                            <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                              <img
+                                src={
+                                  report.images?.[0]?.resource_type === "image" &&
+                                    report.images[0].url
+                                    ? report.images[0].url
+                                    : "/indonesia-city.jpg"
+                                }
+                                alt={report.title}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                                onError={(event) => {
+                                  event.currentTarget.onerror = null;
+                                  event.currentTarget.src = "/indonesia-city.jpg";
+                                }}
+                              />
+                            </div>
+
                           ) : (
                             <div className="flex h-full items-center justify-center text-slate-400">
                               <FileText size={20} />
