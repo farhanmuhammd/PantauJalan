@@ -76,20 +76,9 @@ export const getReports = async (req, res, next) => {
       Report.countDocuments(filter),
     ]);
 
-    const data = items.map((item) => {
-      const report = item.toJSON();
-
-      return {
-        ...report,
-        images: (item.images ?? []).map((image) =>
-          typeof image === "string" ? image : image.url
-        ),
-      };
-    });
-
     return success(res, {
       message: "Daftar laporan berhasil diambil",
-      data,
+      data: items,
       meta: buildMeta({ page, limit, totalItems }),
     });
   } catch (err) {
