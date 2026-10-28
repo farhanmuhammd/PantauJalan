@@ -164,7 +164,28 @@ export const getReportSummary = async (req, res, next) => {
         { $sort: { status: 1 } },
       ],
 
-      // Ringkasan jumlah laporan berdasarkan tipe
+      severitySummary: [
+        {
+          $match: {
+            severity: { $ne: null, $exists: true },
+          },
+        },
+        {
+          $group: {
+            _id: "$severity",
+            total: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            severity: "$_id",
+            total: 1,
+          },
+        },
+        { $sort: { severity: 1 } },
+      ],
+
       typeSummary: [
         {
           $match: {
@@ -188,12 +209,16 @@ export const getReportSummary = async (req, res, next) => {
       ],
     };
 
-    fields.forEach((f) => {
-      facets[f] = [
-        { $match: { [f]: { $ne: null } } },
+    fields.forEach((field) => {
+      facets[field] = [
+        {
+          $match: {
+            [field]: { $ne: null },
+          },
+        },
         {
           $group: {
-            _id: `$${f}`,
+            _id: `$${field}`,
             total: { $sum: 1 },
           },
         },
@@ -227,7 +252,6 @@ export const getReportSummary = async (req, res, next) => {
     next(err);
   }
 };
-
 
 // POST /api/reports
 export const createReport = async (req, res, next) => {
