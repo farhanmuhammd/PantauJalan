@@ -155,13 +155,6 @@ export const createProgress = async (req, res, next) => {
 
     const files = req.files ?? [];
 
-    if (files.length < 1) {
-      return error(res, {
-        message: "Setiap progres harus memiliki minimal 1 foto bukti",
-        statusCode: 422,
-      });
-    }
-
     const body = req.body ?? {};
 
     const cost = body.cost === undefined ? 0 : Number(body.cost);
@@ -173,10 +166,12 @@ export const createProgress = async (req, res, next) => {
       });
     }
 
-    // Upload foto bukti ke Cloudinary.
-    for (const file of files) {
-      const image = await uploadFiles(file, "progress");
-      uploadedImages.push(image);
+    if (files.length > 1) {
+      // Upload foto bukti ke Cloudinary.
+      for (const file of files) {
+        const image = await uploadFiles(file, "progress");
+        uploadedImages.push(image);
+      }
     }
 
     const item = await RepairProgress.create({
