@@ -99,6 +99,10 @@ export interface ReportSummaryData {
     total: number;
     status: ReportStatus;
   }[];
+  severitySummary: {
+    total: number;
+    severity: ReportSeverity;
+  }[];
   typeSummary: ReportTypeSummary[];
   street: ReportSummaryItem[];
   village: ReportSummaryItem[];

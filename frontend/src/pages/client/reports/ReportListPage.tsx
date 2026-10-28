@@ -18,6 +18,7 @@ import {
 import { getReports, getReportSummary } from "./api/reports.api.ts";
 import type {
     ReportItem,
+    ReportSeverity,
     ReportStatus,
     ReportSummaryItem,
 } from "./types/reports.types.ts";
@@ -327,6 +328,157 @@ function DistrictChart({ districts }: { districts: ReportSummaryItem[] }) {
     );
 }
 
+const severityOrder: ReportSeverity[] = ["ringan", "sedang", "berat"];
+
+const severityChartMeta: Record<
+    ReportSeverity,
+    { label: string; bar: string; dot: string; text: string }
+> = {
+    ringan: {
+        label: "Ringan",
+        bar: "bg-gradient-to-t from-lime-500 to-lime-300",
+        dot: "bg-lime-500",
+        text: "text-lime-700",
+    },
+    sedang: {
+        label: "Sedang",
+        bar: "bg-gradient-to-t from-emerald-600 to-emerald-400",
+        dot: "bg-emerald-600",
+        text: "text-emerald-700",
+    },
+    berat: {
+        label: "Berat",
+        bar: "bg-gradient-to-t from-emerald-900 to-emerald-700",
+        dot: "bg-emerald-900",
+        text: "text-emerald-900",
+    },
+};
+
+function SeverityChart({
+    data,
+}: {
+    data: { total: number; severity: ReportSeverity }[];
+}) {
+    const { t } = useTranslation();
+    const reduceMotion = useReducedMotion();
+
+    const items = severityOrder.map((key) => ({
+        key,
+        total:
+            data.find((item) => String(item.severity).toLowerCase() === key)
+                ?.total ?? 0,
+    }));
+
+    const sum = items.reduce((acc, item) => acc + item.total, 0);
+    const maxValue = Math.max(...items.map((item) => item.total), 1);
+    const scaleMax = Math.ceil(maxValue / 4) * 4 || 4;
+    const ticks = [1, 0.75, 0.5, 0.25, 0];
+
+    if (sum === 0) {
+        return (
+            <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 text-slate-400">
+                <FileText size={26} strokeWidth={1.5} />
+                <span className="text-sm">Belum ada data tingkat kerusakan</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full">
+            {/* Area plot */}
+            <div className="relative h-52">
+                {/* Garis bantu + skala */}
+                <div className="absolute inset-0 flex flex-col justify-between">
+                    {ticks.map((ratio) => (
+                        <div key={ratio} className="flex items-center gap-2">
+                            <span className="w-8 shrink-0 text-right text-[10px] text-slate-400">
+                                {Math.round(scaleMax * ratio)}
+                            </span>
+                            <div
+                                className={`h-px flex-1 ${ratio === 0
+                                    ? "bg-slate-300"
+                                    : "border-t border-dashed border-slate-200"
+                                    }`}
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Batang */}
+                <div className="absolute inset-y-0 left-10 right-0 flex items-end justify-around px-2">
+                    {items.map((item, index) => {
+                        const meta = severityChartMeta[item.key];
+                        const pct = (item.total / scaleMax) * 100;
+
+                        return (
+                            <div
+                                key={item.key}
+                                className="group relative flex h-full w-1/3 items-end justify-center"
+                                title={`${meta.label}: ${item.total} laporan`}
+                            >
+                                <motion.div
+                                    className={`relative w-12 rounded-t-lg sm:w-14 ${item.total > 0 ? meta.bar : "bg-slate-200"
+                                        } transition-[filter] group-hover:brightness-95`}
+                                    initial={reduceMotion ? false : { height: 0 }}
+                                    animate={{
+                                        height: item.total > 0 ? `${pct}%` : 3,
+                                    }}
+                                    transition={{
+                                        duration: 0.6,
+                                        delay: index * 0.08,
+                                        ease: "easeOut",
+                                    }}
+                                >
+                                    <span
+                                        className={`absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-bold ${item.total > 0
+                                            ? meta.text
+                                            : "text-slate-400"
+                                            }`}
+                                    >
+                                        {item.total.toLocaleString("id-ID")}
+                                    </span>
+                                </motion.div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Label sumbu X */}
+            <div className="ml-10 mt-2 flex justify-around px-2">
+                {items.map((item) => (
+                    <span
+                        key={item.key}
+                        className="w-1/3 text-center text-xs font-medium text-slate-600"
+                    >
+                        {t(`severity.${item.key}`, severityChartMeta[item.key].label)}
+                    </span>
+                ))}
+            </div>
+
+            {/* Ringkasan persentase */}
+            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4">
+                {items.map((item) => {
+                    const meta = severityChartMeta[item.key];
+                    const share = Math.round((item.total / sum) * 100);
+
+                    return (
+                        <div key={item.key} className="text-center">
+                            <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
+                                <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
+                                {meta.label}
+                            </div>
+                            <p className={`mt-0.5 text-lg font-bold ${meta.text}`}>
+                                {share}%
+                            </p>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 const DISMISS_KEY = "report-cta-bubble-dismissed";
 
 function Mascot() {
@@ -530,6 +682,10 @@ export default function ReportListPage() {
         { total: number; status: ReportStatus }[]
     >([]);
 
+    const [severitySummary, setSeveritySummary] = useState<
+        { total: number; severity: ReportSeverity }[]
+    >([]);
+
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -587,11 +743,14 @@ export default function ReportListPage() {
                 if (cancelled) return;
 
                 setReports(listResponse.data);
+
                 setTotalReports(listResponse.meta.totalItems);
                 setTotalPages(Math.max(listResponse.meta.totalPages, 1));
 
                 const summary = summaryResponse.data;
                 setStatusSummary(summary.statusSummary ?? []);
+                setSeveritySummary(summary.severitySummary ?? []);
+                console.log(summary.severitySummary)
                 setDistricts(
                     summary.district?.length
                         ? summary.district
@@ -767,18 +926,35 @@ export default function ReportListPage() {
                             })}
                         </div>
 
-                        {/* Distribusi Kecamatan */}
-                        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
-                            <div className="mb-4">
-                                <h2 className="text-base font-bold text-slate-800">
-                                    Kerusakan per Kecamatan
-                                </h2>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Distribusi pengaduan di Kota Medan
-                                </p>
+                        {/* Grafik */}
+                        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+                            {/* Distribusi Kecamatan */}
+                            <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+                                <div className="mb-4">
+                                    <h2 className="text-base font-bold text-slate-800">
+                                        Kerusakan per Kecamatan
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Distribusi pengaduan di Kota Medan
+                                    </p>
+                                </div>
+
+                                <DistrictChart districts={districts} />
                             </div>
 
-                            <DistrictChart districts={districts} />
+                            {/* Tingkat Kerusakan */}
+                            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+                                <div className="mb-5">
+                                    <h2 className="text-base font-bold text-slate-800">
+                                        Tingkat Kerusakan
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Jumlah laporan berdasarkan tingkat keparahan
+                                    </p>
+                                </div>
+
+                                <SeverityChart data={severitySummary} />
+                            </div>
                         </div>
                     </section>
 
